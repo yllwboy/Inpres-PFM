@@ -16,12 +16,21 @@
  */
 package serveur_mouvements;
 
+import ProtocoleCHAMAP.ReponseCHAMAP;
+import ProtocoleCHAMAP.RequeteCHAMAP;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.math.BigDecimal;
 import java.net.Socket;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.net.UnknownHostException;
+import java.security.*;
+import java.util.Date;
 import serveur.ThreadServeur;
 import serveur.ListeTaches;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import protocole.ConsoleServeur;
 import serveur.ServeurPLAMAP;
 
@@ -34,6 +43,7 @@ public class Serveur_Mouvements extends javax.swing.JFrame implements ConsoleSer
     private int port_in, port_emp;
     private ThreadServeur ts_in = null;
     private ServeurPLAMAP ts_emp = null;
+    
     /**
      * Creates new form Serveur_Mouvements
      */
@@ -177,7 +187,7 @@ public class Serveur_Mouvements extends javax.swing.JFrame implements ConsoleSer
             try {
                 port_emp = Integer.parseInt(TFPort_emp.getText());
                 TraceEvenements("serveur#acquisition du port_mouvements#main");
-                ts_emp = new ServeurPLAMAP(port_emp, new Socket(TFAdresse_compta.getText(), Integer.parseInt(TFPort_compta.getText())), new ListeTaches(), this);
+                ts_emp = new ServeurPLAMAP(TFAdresse_compta.getText(), Integer.parseInt(TFPort_compta.getText()), port_emp, new ListeTaches(), this);
                 ts_emp.start();
             } catch (Exception ex) {
                 System.err.println("Erreur ? [" + ex.getMessage() + "]");

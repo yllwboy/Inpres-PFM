@@ -7,8 +7,6 @@ package ProtocolePLAMAP;
 
 import ProtocoleCHAMAP.ReponseCHAMAP;
 import ProtocoleCHAMAP.RequeteCHAMAP;
-import ProtocoleTRAMAP.ReponseTRAMAP;
-import ProtocoleTRAMAP.RequeteTRAMAP;
 import static ProtocoleTRAMAP.RequeteTRAMAP.codeProvider;
 import beansForJdbc.BeanBDAccess;
 import java.io.BufferedReader;
@@ -70,12 +68,6 @@ public class RequetePLAMAP implements Requete, Serializable {
         type = t;
         chargeUtile = chu;
     }
-    
-    public RequetePLAMAP(int t, String chu, Socket s) {
-        type = t;
-        chargeUtile = chu;
-        socketClient = s;
-    }
 
     public String getChargeUtile() {
         return chargeUtile;
@@ -91,6 +83,14 @@ public class RequetePLAMAP implements Requete, Serializable {
 
     public void setIn(BufferedReader in) {
         this.in = in;
+    }
+
+    public Socket getSocketClient() {
+        return socketClient;
+    }
+
+    public void setSocketClient(Socket socketClient) {
+        this.socketClient = socketClient;
     }
     
     @Override
@@ -122,51 +122,27 @@ public class RequetePLAMAP implements Requete, Serializable {
         
         boolean loggedIn = false;
         
-        DataOutputStream out = null;
+        DataOutputStream out;
+        try {
+            out = new DataOutputStream(sock.getOutputStream());
+        } catch(IOException e) {
+            System.err.println("Erreur ? [" + e.getMessage() + "]");
+            return;
+        }
         RequetePLAMAP req = this;
         String rep = "";
         
-        ObjectOutputStream cli_oos = null;
-        ObjectInputStream cli_ois = null;
+        ObjectOutputStream cli_oos;
+        ObjectInputStream cli_ois;
+        try {
+            cli_oos = new ObjectOutputStream(socketClient.getOutputStream());
+            cli_ois = new ObjectInputStream(socketClient.getInputStream());
+        } catch (IOException e) {
+            System.err.println("Erreur ? [" + e.getMessage() + "]");
+            return;
+        }
         RequeteCHAMAP cli_req = null;
         ReponseCHAMAP cli_rep = null;
-        
-        try {
-            out = new DataOutputStream(sock.getOutputStream());
-            cli_oos = new ObjectOutputStream(sock.getOutputStream());
-            cli_ois = new ObjectInputStream(sock.getInputStream());
-            
-            System.out.println("Instanciation du message digest");
-            MessageDigest md = MessageDigest.getInstance("SHA-1", codeProvider);
-            md.update("john".getBytes());
-            md.update("doe".getBytes());
-
-            long temps = (new Date()).getTime();
-            double alea = Math.random();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream bdos = new DataOutputStream(baos);
-            bdos.writeLong(temps);
-            bdos.writeDouble(alea);
-            
-            md.update(baos.toByteArray());
-            cli_req = new RequeteCHAMAP(RequeteCHAMAP.LOGIN_TRAF,  "john  " + temps + "  " + alea, md.digest());
-            
-            cli_oos.writeObject(cli_rep);
-            cli_oos.flush();
-            
-            cli_rep = (ReponseCHAMAP)cli_ois.readObject();
-            if(cli_rep.getCode() == ReponseCHAMAP.LOGIN_TRAF_OK) {
-                System.out.println("Connexion au serveur_compta réussie");
-            }
-            else {
-                System.err.println("Échec de la connexion au serveur_compta");
-                return;
-            }
-            
-        } catch (Exception ex) {
-            System.err.println("Erreur ? [" + ex.getMessage() + "]");
-        }
-        
         
         while(true) {
             if(req.getType() == RequetePLAMAP.LOGIN_CONT) {
@@ -356,7 +332,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                             cli_rep = (ReponseCHAMAP)cli_ois.readObject();
                             System.out.println("Requete lue par le serveur, instance de " + req.getClass().getName());
                             
-                            if(cli_req.getType() == ReponseCHAMAP.MAKE_BILL_OK)
+                            if(cli_rep.getCode() == ReponseCHAMAP.MAKE_BILL_OK)
                                 rep = "SIGNAL_DEP_OK";
                             else
                                 rep = "BILLING_ERROR";

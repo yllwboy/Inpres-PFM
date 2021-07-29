@@ -30,12 +30,12 @@ import java.net.*;
  */
 public class ThreadServeur extends Thread {
     
-    private final int NB_THREADS = 3;
+    protected final int NB_THREADS = 3;
     
-    private int port;
-    private SourceTaches tachesAExecuter;
-    private ConsoleServeur guiApplication;
-    private ServerSocket SSocket = null;
+    protected int port;
+    protected SourceTaches tachesAExecuter;
+    protected ConsoleServeur guiApplication;
+    protected ServerSocket SSocket = null;
 
     public ThreadServeur(int port, SourceTaches tachesAExecuter, ConsoleServeur guiApplication) {
         this.port = port;

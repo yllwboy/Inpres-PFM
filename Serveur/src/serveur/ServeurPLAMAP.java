@@ -16,41 +16,129 @@
  */
 package serveur;
 
-import ProtocoleBISAMAP.RequeteBISAMAP;
+import ProtocoleCHAMAP.ReponseCHAMAP;
 import ProtocoleCHAMAP.RequeteCHAMAP;
 import ProtocolePLAMAP.RequetePLAMAP;
-import ProtocoleTRAMAP.RequeteTRAMAP;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
+import java.util.Date;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import protocole.ConsoleServeur;
-import protocole.Requete;
 
 /**
  *
  * @author hector
  */
-public class ServeurPLAMAP  extends Thread {
+public class ServeurPLAMAP extends ThreadServeur {
+    private String addr_compta;
+    private int port_compta;
     
-    private final int NB_THREADS = 3;
-    
-    private int port;
-    private Socket socketClient;
-    private SourceTaches tachesAExecuter;
-    private ConsoleServeur guiApplication;
-    private ServerSocket SSocket = null;
-    
-    public ServeurPLAMAP(int port, Socket socketClient, SourceTaches tachesAExecuter, ConsoleServeur guiApplication) {
-        this.port = port;
-        this.socketClient = socketClient;
-        this.tachesAExecuter = tachesAExecuter;
-        this.guiApplication = guiApplication;
+    ObjectOutputStream oos;
+    ObjectInputStream ois;
+
+    public ServeurPLAMAP(String addr_compta, int port_compta, int port, SourceTaches tachesAExecuter, ConsoleServeur guiApplication) {
+        super(port, tachesAExecuter, guiApplication);
+        this.addr_compta = addr_compta;
+        this.port_compta = port_compta;
     }
     
+    @Override
     public void run() {
+        Socket socketClient;
+        
+        try {
+            socketClient = new Socket(addr_compta, port_compta);
+            System.out.println(socketClient.getInetAddress().toString());
+        }
+        catch (UnknownHostException e) {
+            guiApplication.TraceEvenements("Erreur ! Host non trouvé [" + e + "]");
+            return;
+        }
+        catch (IOException e) {
+            guiApplication.TraceEvenements("Erreur ! Pas de connexion ? [" + e + "]");
+            return;
+        }
+        
+        String chargeUtile;
+        String temps = Long.toString((new Date()).getTime());
+        String alea = Double.toString(Math.random());
+        byte[] msgD;
+
+        try {
+            String user = "john", password = "doe";
+
+            System.out.println("Instanciation du message digest");
+            Security.addProvider(new BouncyCastleProvider());
+            MessageDigest md = MessageDigest.getInstance("SHA-1", RequeteCHAMAP.codeProvider);
+            md.update(user.getBytes());
+            md.update(password.getBytes());
+            md.update(temps.getBytes());
+            md.update(alea.getBytes());
+
+            msgD = md.digest();
+            chargeUtile = user + "  " + temps + "  " + alea;
+
+        } catch (NoSuchAlgorithmException | NoSuchProviderException  ex) {
+            guiApplication.TraceEvenements("Erreur ! [" + ex.getMessage() + "]");
+            return;
+        }
+
+        // Envoi de la requête
+        try {
+            oos = new ObjectOutputStream(socketClient.getOutputStream());
+            oos.writeObject(new RequeteCHAMAP(RequeteCHAMAP.LOGIN_TRAF, chargeUtile, msgD));
+            oos.flush();
+        }
+        catch (IOException e) {
+            guiApplication.TraceEvenements("Erreur réseau ? [" + e.getMessage() + "]");
+            return;
+        }
+
+        // Lecture de la réponse
+        ReponseCHAMAP rep = null;
+        try {
+            ois = new ObjectInputStream(socketClient.getInputStream());
+            rep = (ReponseCHAMAP)ois.readObject();
+
+            if(rep.getCode() == ReponseCHAMAP.LOGIN_TRAF_OK)
+                guiApplication.TraceEvenements(" *** Reponse reçue : Connexion réussie");
+            else if(rep.getCode() == ReponseCHAMAP.WRONG_LOGIN)
+                guiApplication.TraceEvenements(" *** Reponse reçue : Nom d'utilisateur ou mot de passe erroné");
+            else if(rep.getCode() == ReponseCHAMAP.ALREADY_LOGGED_IN)
+                guiApplication.TraceEvenements(" *** Reponse reçue : Vous êtes déjà connecté");
+            else if(rep.getCode() == ReponseCHAMAP.INVALID_FORMAT)
+                guiApplication.TraceEvenements(" *** Reponse reçue : Le format de la commande est invalide");
+            else if(rep.getCode() == ReponseCHAMAP.UNKNOWN_TYPE)
+                guiApplication.TraceEvenements(" *** Reponse reçue : La commande est inconnue");
+            else if(rep.getCode() == ReponseCHAMAP.SERVER_FAIL)
+                guiApplication.TraceEvenements(" *** Reponse reçue : Erreur système du serveur");
+            else
+                guiApplication.TraceEvenements(" *** Reponse reçue : " + rep.getChargeUtile());
+
+            if(rep.getCode() != ReponseCHAMAP.LOGIN_TRAF_OK) {
+                socketClient.close();
+                return;
+            }
+        }
+        catch (ClassNotFoundException e) {
+            guiApplication.TraceEvenements("--- erreur sur la classe = " + e.getMessage());
+            return;
+        }
+        catch (IOException e) {
+            guiApplication.TraceEvenements("--- erreur IO = " + e.getMessage());
+            return;
+        }
+        
         try {
             SSocket = new ServerSocket(port);
         }
@@ -78,6 +166,7 @@ public class ServeurPLAMAP  extends Thread {
                 System.out.println(chu);
                 RequetePLAMAP req = new RequetePLAMAP(chu.split("\r\n")[0]);
                 req.setIn(inFromServer);
+                req.setSocketClient(socketClient);
                 
                 Runnable travail = req.createRunnable(CSocket, guiApplication);
                 if (travail != null) {

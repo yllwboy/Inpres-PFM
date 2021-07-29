@@ -16,6 +16,7 @@ import java.net.Socket;
 import java.security.*;
 import java.sql.ResultSet;
 import java.util.Vector;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import protocole.ConsoleServeur;
 import protocole.Requete;
 
@@ -34,6 +35,7 @@ public class RequeteCHAMAP implements Requete, Serializable {
     private int type;
     private String chargeUtile;
     private byte[] digest;
+    
     private Socket socketClient;
     private ObjectInputStream ois;
 
@@ -57,7 +59,7 @@ public class RequeteCHAMAP implements Requete, Serializable {
     public String getChargeUtile() {
         return chargeUtile;
     }
-
+    
     public byte[] getDigest() {
         return digest;
     }
@@ -93,7 +95,7 @@ public class RequeteCHAMAP implements Requete, Serializable {
     }
     
     private void traiteRequeteLogin(Socket sock, ConsoleServeur cs) {
-        BeanBDAccess db = new BeanBDAccess("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost:3306/bd_mouvements", "hector", "WA0UH.nice.key");
+        BeanBDAccess db = new BeanBDAccess("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost:3306/bd_compta", "hector", "WA0UH.nice.key");
         try {
             db.creerConnexionBD();
         }
@@ -104,7 +106,7 @@ public class RequeteCHAMAP implements Requete, Serializable {
         boolean loggedIn = false;
         
         ObjectOutputStream oos = null;
-        RequeteCHAMAP req = null;
+        RequeteCHAMAP req = this;
         ReponseCHAMAP rep = null;
         
         try {
@@ -122,35 +124,32 @@ public class RequeteCHAMAP implements Requete, Serializable {
                 
                 if(!loggedIn) {
                     String[] parser = cu.split("  ");
-
+                    
                     if(parser.length >= 3) {
                         String user = parser[0];
                         String temps = parser[1];
                         String alea = parser[2];
                         
                         cs.TraceEvenements(adresseDistante + "#Connexion de " + user + "#" + Thread.currentThread().getName());
-                    
-                        ResultSet rs;
+                        //ResultSet rs;
                         try {
-                            rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
-                            if(rs.next())
+                            //rs = db.executeRequeteSelection("SELECT password FROM personnel WHERE login = '" + user + "'");
+                            //if(rs.next())
+                            if("john".equals(user))
                             {
-                                String pass = rs.getString("pass");
+                                String pass = "doe";//rs.getString("password");
 
                                 // confection d'un digest local
+                                Security.addProvider(new BouncyCastleProvider());
                                 MessageDigest md = MessageDigest.getInstance("SHA-1", codeProvider);
                                 md.update(user.getBytes());
                                 md.update(pass.getBytes());
+                                md.update(temps.getBytes());
+                                md.update(alea.getBytes());
                                 
-                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                                DataOutputStream bdos = new DataOutputStream(baos);
-                                bdos.writeLong(Long.parseLong(temps));
-                                bdos.writeDouble(Double.parseDouble(alea));
-                                
-                                md.update(baos.toByteArray());
                                 byte[] msgDLocal = md.digest();
 
-                                if(msgDLocal.equals(req.getDigest())) {
+                                if(MessageDigest.isEqual(req.getDigest(), msgDLocal)) {
                                     loggedIn = true;
                                     rep = new ReponseCHAMAP(ReponseCHAMAP.LOGIN_TRAF_OK, null);
                                 }
@@ -159,7 +158,8 @@ public class RequeteCHAMAP implements Requete, Serializable {
                             }
                             else
                                 rep = new ReponseCHAMAP(ReponseCHAMAP.WRONG_LOGIN, null);
-                        } catch (Exception ex) {
+
+                        } catch (NoSuchAlgorithmException | NoSuchProviderException ex) {
                             rep = new ReponseCHAMAP(ReponseCHAMAP.SERVER_FAIL, null);
                         }
                     }
@@ -185,8 +185,7 @@ public class RequeteCHAMAP implements Requete, Serializable {
                         for(int i = 1; i < parser.length; i++)
                             containers.add(parser[i]);
                         cs.TraceEvenements(adresseDistante + "#Génération des factures pour " + identifiant + "#" + Thread.currentThread().getName());
-
-                        
+                        rep = new ReponseCHAMAP(ReponseCHAMAP.MAKE_BILL_OK, null);
                     }
                     else
                         rep = new ReponseCHAMAP(ReponseCHAMAP.INVALID_FORMAT, null);

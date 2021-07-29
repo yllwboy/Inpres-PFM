@@ -728,9 +728,11 @@ public class Application_Mouvements extends javax.swing.JFrame {
         }
         catch (UnknownHostException e) {
             TAReponse.setText("Erreur ! Host non trouvé [" + e + "]");
+            return;
         }
         catch (IOException e) {
             TAReponse.setText("Erreur ! Pas de connexion ? [" + e + "]");
+            return;
         }
         
         String chargeUtile = TFUser.getText() + "  " + TFPass.getText();

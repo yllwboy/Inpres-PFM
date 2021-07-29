@@ -17,22 +17,14 @@
 package ProtocoleTRAMAP;
 
 //import beansForJdbc.BeanBDAccess;
-import ProtocoleCHAMAP.ReponseCHAMAP;
-import ProtocoleCHAMAP.RequeteCHAMAP;
 import beansForJdbc.BeanBDAccess;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import protocole.Requete;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
-import java.security.*;
 import java.sql.ResultSet;
-import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import protocole.ConsoleServeur;
 
 /**
@@ -456,7 +448,7 @@ public class RequeteTRAMAP implements Requete, Serializable {
                 req = (RequeteTRAMAP)ois.readObject();
                 System.out.println("Requete lue par le serveur, instance de " + req.getClass().getName());
             }
-            catch(Exception e) {
+            catch(IOException | ClassNotFoundException e) {
                 System.err.println("Erreur ? [" + e.getMessage() + "]");
                 break;
             }

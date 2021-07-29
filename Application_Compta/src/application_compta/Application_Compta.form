@@ -27,9 +27,8 @@
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
                   <Component id="jScrollPane1" pref="376" max="32767" attributes="0"/>
-                  <Group type="102" attributes="0">
-                      <Component id="BGenererCle" min="-2" max="-2" attributes="0"/>
-                      <EmptySpace max="32767" attributes="0"/>
+                  <Group type="102" alignment="0" attributes="0">
+                      <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
                       <Component id="BConnexion" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                       <Component id="BDeconnexion" min="-2" max="-2" attributes="0"/>
@@ -81,7 +80,6 @@
               <Group type="103" groupAlignment="3" attributes="0">
                   <Component id="BConnexion" alignment="3" min="-2" max="-2" attributes="0"/>
                   <Component id="BDeconnexion" alignment="3" min="-2" max="-2" attributes="0"/>
-                  <Component id="BGenererCle" alignment="3" min="-2" max="-2" attributes="0"/>
               </Group>
               <EmptySpace pref="63" max="32767" attributes="0"/>
               <Component id="jScrollPane1" min="-2" pref="73" max="-2" attributes="0"/>
@@ -128,12 +126,24 @@
       </Events>
     </Component>
     <Component class="javax.swing.JTextField" name="TFAdresse">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="127.0.0.1"/>
+      </Properties>
     </Component>
     <Component class="javax.swing.JTextField" name="TFPort">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="55000"/>
+      </Properties>
     </Component>
     <Component class="javax.swing.JTextField" name="TFUser">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="john"/>
+      </Properties>
     </Component>
     <Component class="javax.swing.JTextField" name="TFPass">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="doe"/>
+      </Properties>
     </Component>
     <Container class="javax.swing.JScrollPane" name="jScrollPane1">
       <AuxValues>
@@ -151,13 +161,5 @@
         </Component>
       </SubComponents>
     </Container>
-    <Component class="javax.swing.JButton" name="BGenererCle">
-      <Properties>
-        <Property name="text" type="java.lang.String" value="G&#xe9;n&#xe9;rer cl&#xe9;"/>
-      </Properties>
-      <Events>
-        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="BGenererCleActionPerformed"/>
-      </Events>
-    </Component>
   </SubComponents>
 </Form>

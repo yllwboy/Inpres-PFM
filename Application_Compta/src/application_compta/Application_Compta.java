@@ -7,12 +7,17 @@ package application_compta;
 
 import ProtocoleBISAMAP.*;
 import java.io.*;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.net.*;
 import java.security.*;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
  *
@@ -23,6 +28,7 @@ public class Application_Compta extends javax.swing.JFrame {
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
     private Socket cliSock = null;
+    private SecretKey cle = null;
     
     /**
      * Creates new form Application_Compta
@@ -52,7 +58,6 @@ public class Application_Compta extends javax.swing.JFrame {
         TFPass = new javax.swing.JTextField();
         jScrollPane1 = new javax.swing.JScrollPane();
         TAReponse = new javax.swing.JTextArea();
-        BGenererCle = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -78,17 +83,18 @@ public class Application_Compta extends javax.swing.JFrame {
             }
         });
 
+        TFAdresse.setText("127.0.0.1");
+
+        TFPort.setText("55000");
+
+        TFUser.setText("john");
+
+        TFPass.setText("doe");
+
         TAReponse.setEditable(false);
         TAReponse.setColumns(20);
         TAReponse.setRows(5);
         jScrollPane1.setViewportView(TAReponse);
-
-        BGenererCle.setText("Générer clé");
-        BGenererCle.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                BGenererCleActionPerformed(evt);
-            }
-        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -99,8 +105,7 @@ public class Application_Compta extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 376, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(BGenererCle)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGap(0, 0, Short.MAX_VALUE)
                         .addComponent(BConnexion)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(BDeconnexion))
@@ -140,8 +145,7 @@ public class Application_Compta extends javax.swing.JFrame {
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(BConnexion)
-                    .addComponent(BDeconnexion)
-                    .addComponent(BGenererCle))
+                    .addComponent(BDeconnexion))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 63, Short.MAX_VALUE)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 73, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
@@ -163,45 +167,33 @@ public class Application_Compta extends javax.swing.JFrame {
         }
         catch (UnknownHostException e) {
             TAReponse.setText("Erreur ! Host non trouvé [" + e + "]");
+            return;
         }
         catch (IOException e) {
             TAReponse.setText("Erreur ! Pas de connexion ? [" + e + "]");
+            return;
         }
         
-        String chargeUtile = null;
-        byte[] msgD = null;
+        String chargeUtile;
+        String temps = Long.toString((new Date()).getTime());
+        String alea = Double.toString(Math.random());
+        byte[] msgD;
+
         try {
-            System.out.println("Recuperation de la cle secrète");
-            ObjectInputStream cleFichS = new ObjectInputStream(new FileInputStream("x.ser"));
-            SecretKey cle = (SecretKey) cleFichS.readObject();
-            cleFichS.close();
-            System.out.println(" *** Cle secrète récupérée = " + cle.toString());
-            
-            System.out.println("Instanciation du HMAC");
-            Mac hmac = Mac.getInstance("HMAC-MD5", RequeteBISAMAP.codeProvider);
-            hmac.init(cle);
-            System.out.println("Hachage du message");
-            hmac.update(TFPass.getText().getBytes());
-            System.out.println("Generation des bytes");
-            msgD = hmac.doFinal();
-            System.out.println("Termine : HMAC construit");
-            System.out.println("HMAC = " + new String(msgD));
-            System.out.println("Longueur du HMAC = " + msgD.length);
-            chargeUtile = TFUser.getText();
-            
-        } catch (NoSuchAlgorithmException ex) {
-            TAReponse.setText("Erreur ! [" + ex.getMessage() + "]");
-            return;
-        } catch (NoSuchProviderException ex) {
-            TAReponse.setText("Erreur ! [" + ex.getMessage() + "]");
-            return;
-        } catch (IOException ex) {
-            TAReponse.setText("Erreur ! [" + ex.getMessage() + "]");
-            return;
-        } catch (ClassNotFoundException ex) {
-            TAReponse.setText("Erreur ! [" + ex.getMessage() + "]");
-            return;
-        } catch (InvalidKeyException ex) {
+            String user = TFUser.getText(), password = TFPass.getText();
+
+            System.out.println("Instanciation du message digest");
+            Security.addProvider(new BouncyCastleProvider());
+            MessageDigest md = MessageDigest.getInstance("SHA-1", RequeteBISAMAP.codeProvider);
+            md.update(user.getBytes());
+            md.update(password.getBytes());
+            md.update(temps.getBytes());
+            md.update(alea.getBytes());
+
+            msgD = md.digest();
+            chargeUtile = user + "  " + temps + "  " + alea;
+
+        } catch (NoSuchAlgorithmException | NoSuchProviderException  ex) {
             TAReponse.setText("Erreur ! [" + ex.getMessage() + "]");
             return;
         }
@@ -224,8 +216,38 @@ public class Application_Compta extends javax.swing.JFrame {
             ois = new ObjectInputStream(cliSock.getInputStream());
             rep = (ReponseBISAMAP)ois.readObject();
             
-            if(rep.getCode() == ReponseBISAMAP.LOGIN_OK)
+            if(rep.getCode() == ReponseBISAMAP.LOGIN_OK) {
                 TAReponse.setText(" *** Reponse reçue : Connexion réussie");
+                
+                String[] parser = rep.getChargeUtile().split("  ");
+                    
+                if(parser.length >= 3) {
+                    BigInteger n = new BigInteger(parser[0]);
+                    BigInteger p = new BigInteger(parser[1]);
+                    BigInteger pubkey_a = new BigInteger(parser[2]);
+                    
+                    int b = (int) (Math.random() * 100);
+                    BigInteger pubkey_b = n.pow(b).remainder(p);
+
+                    req = new RequeteBISAMAP(RequeteBISAMAP.LOGIN, pubkey_b.toString());
+                    oos.writeObject(req);
+                    oos.flush();
+                    
+                    BigInteger key_b = pubkey_a.pow(b).remainder(p).remainder(new BigInteger("100000000"));
+                    System.out.println(" *** Clé obtenue = " + key_b.toString());
+                    cle = new SecretKeySpec(key_b.toString().getBytes(), "DES");
+                    
+                    rep = (ReponseBISAMAP)ois.readObject();
+                    
+                    Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", RequeteBISAMAP.codeProvider);
+                    chiffrement.init(Cipher.DECRYPT_MODE, cle);
+                    
+                    byte[] texteCrypte = rep.getDonneesCryptees();
+                    System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+                    byte[] texteClair = chiffrement.doFinal(texteCrypte);
+                    System.out.println(" *** Texte clair = " + new String(texteClair));
+                }
+            }
             else if(rep.getCode() == ReponseBISAMAP.WRONG_LOGIN)
                 TAReponse.setText(" *** Reponse reçue : Nom d'utilisateur ou mot de passe erroné");
             else if(rep.getCode() == ReponseBISAMAP.ALREADY_LOGGED_IN)
@@ -249,40 +271,14 @@ public class Application_Compta extends javax.swing.JFrame {
         }
         catch (IOException e) {
             TAReponse.setText("--- erreur IO = " + e.getMessage());
+        } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+            TAReponse.setText("--- erreur cryptage = " + e.getMessage());
         }
     }//GEN-LAST:event_BConnexionActionPerformed
 
     private void BDeconnexionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BDeconnexionActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_BDeconnexionActionPerformed
-
-    private void BGenererCleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BGenererCleActionPerformed
-        try {
-            KeyGenerator cleGen = KeyGenerator.getInstance("DES", RequeteBISAMAP.codeProvider);
-            cleGen.init(new SecureRandom());
-            SecretKey cle = cleGen.generateKey();
-            System.out.println(" *** Clé générée = " + cle.toString());
-            /*Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", RequeteBISAMAP.codeProvider);
-            chiffrement.init(Cipher.ENCRYPT_MODE, cle);
-            byte[] texteClair = "Francesca aime James".getBytes();
-            byte[] texteCrypté = chiffrement.doFinal(texteClair);
-            String texteCryptéAff = new String (texteCrypté);
-            System.out.println(new String(texteClair) + " ---> " + texteCryptéAff);
-            */
-            ObjectOutputStream cleFich = new ObjectOutputStream(new FileOutputStream("x.ser"));
-            cleFich.writeObject(cle);
-            cleFich.close();
-        }
-        catch (NoSuchAlgorithmException e) {
-            System.out.println("Aie aie " + e.getMessage());
-        }
-        catch(NoSuchProviderException e) {
-            System.out.println("Aie aie " + e.getMessage());
-        }
-        catch (Exception e) {
-            System.out.println("Aie aie imprévu " + e.getMessage());
-        }
-    }//GEN-LAST:event_BGenererCleActionPerformed
 
     /**
      * @param args the command line arguments
@@ -322,7 +318,6 @@ public class Application_Compta extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton BConnexion;
     private javax.swing.JButton BDeconnexion;
-    private javax.swing.JButton BGenererCle;
     private javax.swing.JTextArea TAReponse;
     private javax.swing.JTextField TFAdresse;
     private javax.swing.JTextField TFPass;

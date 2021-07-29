@@ -7,11 +7,15 @@ package ProtocoleBISAMAP;
 
 import beansForJdbc.BeanBDAccess;
 import java.io.*;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.security.MessageDigest;
+import java.security.Security;
 import java.sql.ResultSet;
 import java.util.Vector;
 import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import protocole.ConsoleServeur;
 import protocole.Requete;
 
@@ -99,7 +103,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
     }
     
     private void traiteRequeteLogin(Socket sock, ConsoleServeur cs) {
-        BeanBDAccess db = new BeanBDAccess("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost:3306/bd_mouvements", "hector", "WA0UH.nice.key");
+        BeanBDAccess db = new BeanBDAccess("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost:3306/bd_compta", "hector", "WA0UH.nice.key");
         try {
             db.creerConnexionBD();
         }
@@ -113,10 +117,13 @@ public class RequeteBISAMAP implements Requete, Serializable {
         RequeteBISAMAP req = this;
         ReponseBISAMAP rep = null;
         
+        SecretKey cle;
+        
         try {
             oos = new ObjectOutputStream(sock.getOutputStream());
         } catch (IOException ex) {
-            System.err.println("Erreur ? [" + ex.getMessage() + "]");
+            System.err.println("Erreur stream ? [" + ex.getMessage() + "]");
+            return;
         }
         
         while(true) {
@@ -124,41 +131,80 @@ public class RequeteBISAMAP implements Requete, Serializable {
                 String adresseDistante = sock.getRemoteSocketAddress().toString();
                 System.out.println("Début de Login : adresse distante = " + adresseDistante);
                 // la charge utile est le nom
-                String user = req.getChargeUtile();
+                String cu = req.getChargeUtile();
                 
                 if(!loggedIn) {
-                    cs.TraceEvenements(adresseDistante + "#Connexion de " + user + "#" + Thread.currentThread().getName());
-                    ResultSet rs;
-                    try {
-                        rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
-                        if(rs.next())
-                        {
-                            String pass = rs.getString("pass");
+                    String[] parser = cu.split("  ");
+                    
+                    if(parser.length >= 3) {
+                        String user = parser[0];
+                        String temps = parser[1];
+                        String alea = parser[2];
+                        
+                        cs.TraceEvenements(adresseDistante + "#Connexion de " + user + "#" + Thread.currentThread().getName());
+                        ResultSet rs;
+                        try {
+                            rs = db.executeRequeteSelection("SELECT password FROM personnel WHERE login = '" + user + "'");
+                            if(rs.next())
+                            {
+                                String pass = rs.getString("password");
 
-                            System.out.println("Recuperation de la cle secrète");
-                            ObjectInputStream cleFichS = new ObjectInputStream(new FileInputStream("x.ser"));
-                            SecretKey cle = (SecretKey)cleFichS.readObject();
-                            cleFichS.close();
-                            System.out.println(" *** Cle secrète récupérée = " + cle.toString());
+                                // confection d'un digest local
+                                Security.addProvider(new BouncyCastleProvider());
+                                MessageDigest md = MessageDigest.getInstance("SHA-1", codeProvider);
+                                md.update(user.getBytes());
+                                md.update(pass.getBytes());
+                                md.update(temps.getBytes());
+                                md.update(alea.getBytes());
+                                
+                                byte[] msgDLocal = md.digest();
 
-                            // confection d'un hmac local
-                            Mac hmac = Mac.getInstance("HMAC-MD5", RequeteBISAMAP.codeProvider);
-                            hmac.init(cle);
-                            hmac.update(pass.getBytes());
-                            byte[] msgDLocal = hmac.doFinal();
+                                if(MessageDigest.isEqual(req.getDigest(), msgDLocal)) {
+                                    BigInteger n = new BigInteger("" + (int)(Math.random() * 100000000));
+                                    BigInteger p = new BigInteger("0");
 
-                            if(msgDLocal.equals(req.getDigest())) {
-                                loggedIn = true;
-                                rep = new ReponseBISAMAP(ReponseBISAMAP.LOGIN_OK, null);
+                                    while (n.compareTo(p) > 0)
+                                        p = new BigInteger("" + (int)(Math.random() * 100000000));
+
+                                    int a = (int) (Math.random() * 100);
+                                    BigInteger pubkey_a = n.pow(a).remainder(p);
+
+                                    rep = new ReponseBISAMAP(ReponseBISAMAP.LOGIN_OK, n.toString() + "  " + p.toString() + "  " + pubkey_a.toString());
+                                    
+                                    oos.writeObject(rep);
+                                    oos.flush();
+
+                                    req = (RequeteBISAMAP)ois.readObject();
+                                    System.out.println("Requete lue par le serveur, instance de " + req.getClass().getName());
+                                    
+                                    BigInteger pubkey_b = new BigInteger(req.getChargeUtile());
+                                    
+                                    BigInteger key_a = pubkey_b.pow(a).remainder(p).remainder(new BigInteger("100000000"));
+                                    
+                                    System.out.println(" *** Clé obtenue = " + key_a.toString());
+                                    
+                                    cle = new SecretKeySpec(key_a.toString().getBytes(), "DES");
+                                    
+                                    Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", codeProvider);
+                                    chiffrement.init(Cipher.ENCRYPT_MODE, cle);
+                                    byte[] texteClair = "Hello world!".getBytes();
+                                    byte[] texteCrypte = chiffrement.doFinal(texteClair);
+                                    System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+                                    
+                                    loggedIn = true;
+                                    rep = new ReponseBISAMAP(ReponseBISAMAP.LOGIN_OK, "", texteCrypte);
+                                }
+                                else
+                                    rep = new ReponseBISAMAP(ReponseBISAMAP.WRONG_LOGIN, null);
                             }
                             else
                                 rep = new ReponseBISAMAP(ReponseBISAMAP.WRONG_LOGIN, null);
+                        } catch (Exception ex) {
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
                         }
-                        else
-                            rep = new ReponseBISAMAP(ReponseBISAMAP.WRONG_LOGIN, null);
-                    } catch (Exception ex) {
-                        rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
                     }
+                    else
+                        rep = new ReponseBISAMAP(ReponseBISAMAP.INVALID_FORMAT, null);
                 }
                 else
                     rep = new ReponseBISAMAP(ReponseBISAMAP.ALREADY_LOGGED_IN, null);
@@ -172,6 +218,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
 
                 if(loggedIn) {
                     cs.TraceEvenements(adresseDistante + "#Facture la plus ancienne non validée#" + Thread.currentThread().getName());
+                    rep = new ReponseBISAMAP(ReponseBISAMAP.GET_NEXT_BILL_OK, null);
                 }
                 else
                     rep = new ReponseBISAMAP(ReponseBISAMAP.NOT_LOGGED_IN, null);
@@ -185,6 +232,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
 
                 if(loggedIn) {
                     cs.TraceEvenements(adresseDistante + "#Validation de " + facture + "#" + Thread.currentThread().getName());
+                    rep = new ReponseBISAMAP(ReponseBISAMAP.VALIDATE_BILL_OK, null);
                 }
                 else
                     rep = new ReponseBISAMAP(ReponseBISAMAP.NOT_LOGGED_IN, null);
@@ -205,7 +253,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                         String fin = parser[2];
                         cs.TraceEvenements(adresseDistante + "#Liste des factures de la société " + societe + " entre " + debut + " et " + fin + "#" + Thread.currentThread().getName());    
                         
-                        
+                        rep = new ReponseBISAMAP(ReponseBISAMAP.LIST_BILLS_OK, null);
                     }
                     else
                         rep = new ReponseBISAMAP(ReponseBISAMAP.INVALID_FORMAT, null);
@@ -228,6 +276,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                         factures.add(parser[i]);
                     cs.TraceEvenements(adresseDistante + "#Envoi de factures#" + Thread.currentThread().getName());
                     
+                    rep = new ReponseBISAMAP(ReponseBISAMAP.SEND_BILLS_OK, null);
                 }
                 else
                     rep = new ReponseBISAMAP(ReponseBISAMAP.NOT_LOGGED_IN, null);
@@ -248,7 +297,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                         String infobanc = parser[2];
                         cs.TraceEvenements(adresseDistante + "#Enregistrement du paiement pour " + facture + "#" + Thread.currentThread().getName());
 
-                        
+                        rep = new ReponseBISAMAP(ReponseBISAMAP.REC_PAY_OK, null);
                     }
                     else
                         rep = new ReponseBISAMAP(ReponseBISAMAP.INVALID_FORMAT, null);
@@ -270,7 +319,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                         String indic = parser[0];
                         cs.TraceEvenements(adresseDistante + "#Liste des factures non payées#" + Thread.currentThread().getName());
 
-                        
+                        rep = new ReponseBISAMAP(ReponseBISAMAP.LIST_WAITING_OK, null);
                     }
                     else
                         rep = new ReponseBISAMAP(ReponseBISAMAP.INVALID_FORMAT, null);
@@ -288,7 +337,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                 req = (RequeteBISAMAP)ois.readObject();
                 System.out.println("Requete lue par le serveur, instance de " + req.getClass().getName());
             }
-            catch (Exception e) {
+            catch (IOException | ClassNotFoundException e) {
                 System.err.println("Erreur ? [" + e.getMessage() + "]");
                 break;
             }
@@ -297,7 +346,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
         try {
             sock.close();
         } catch (IOException e) {
-            System.err.println("Erreur ? [" + e.getMessage() + "]");
+            System.err.println("Erreur socket ? [" + e.getMessage() + "]");
         }
     }
     
