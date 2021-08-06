@@ -16,21 +16,8 @@
  */
 package serveur_mouvements;
 
-import ProtocoleCHAMAP.ReponseCHAMAP;
-import ProtocoleCHAMAP.RequeteCHAMAP;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.math.BigDecimal;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.security.*;
-import java.util.Date;
 import serveur.ThreadServeur;
 import serveur.ListeTaches;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import protocole.ConsoleServeur;
 import serveur.ServeurPLAMAP;
 

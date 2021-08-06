@@ -6,15 +6,12 @@
 package ProtocoleCHAMAP;
 
 import beansForJdbc.BeanBDAccess;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
 import java.security.*;
-import java.sql.ResultSet;
 import java.util.Vector;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import protocole.ConsoleServeur;
@@ -105,14 +102,15 @@ public class RequeteCHAMAP implements Requete, Serializable {
         
         boolean loggedIn = false;
         
-        ObjectOutputStream oos = null;
+        ObjectOutputStream oos;
         RequeteCHAMAP req = this;
-        ReponseCHAMAP rep = null;
+        ReponseCHAMAP rep;
         
         try {
             oos = new ObjectOutputStream(sock.getOutputStream());
         } catch (IOException ex) {
             System.err.println("Erreur ? [" + ex.getMessage() + "]");
+            return;
         }
         
         while(true) {
@@ -203,7 +201,7 @@ public class RequeteCHAMAP implements Requete, Serializable {
                 req = (RequeteCHAMAP)ois.readObject();
                 System.out.println("Requete lue par le serveur, instance de " + req.getClass().getName());
             }
-            catch (Exception e) {
+            catch (IOException | ClassNotFoundException e) {
                 System.err.println("Erreur ? [" + e.getMessage() + "]");
                 break;
             }

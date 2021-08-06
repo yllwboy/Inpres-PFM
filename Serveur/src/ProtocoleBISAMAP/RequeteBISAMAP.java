@@ -12,7 +12,10 @@ import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.Security;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -111,13 +114,14 @@ public class RequeteBISAMAP implements Requete, Serializable {
             return;
         }
         
-        boolean loggedIn = false;
+        String session = null;
         
         ObjectOutputStream oos = null;
         RequeteBISAMAP req = this;
         ReponseBISAMAP rep = null;
         
-        SecretKey cle;
+        SecretKey cle = null;
+        
         
         try {
             oos = new ObjectOutputStream(sock.getOutputStream());
@@ -133,7 +137,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                 // la charge utile est le nom
                 String cu = req.getChargeUtile();
                 
-                if(!loggedIn) {
+                if(session == null) {
                     String[] parser = cu.split("  ");
                     
                     if(parser.length >= 3) {
@@ -142,9 +146,8 @@ public class RequeteBISAMAP implements Requete, Serializable {
                         String alea = parser[2];
                         
                         cs.TraceEvenements(adresseDistante + "#Connexion de " + user + "#" + Thread.currentThread().getName());
-                        ResultSet rs;
                         try {
-                            rs = db.executeRequeteSelection("SELECT password FROM personnel WHERE login = '" + user + "'");
+                            ResultSet rs = db.executeRequeteSelection("SELECT * FROM personnel WHERE login = '" + user + "'");
                             if(rs.next())
                             {
                                 String pass = rs.getString("password");
@@ -179,7 +182,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                                     
                                     BigInteger pubkey_b = new BigInteger(req.getChargeUtile());
                                     
-                                    BigInteger key_a = pubkey_b.pow(a).remainder(p).remainder(new BigInteger("100000000"));
+                                    BigInteger key_a = pubkey_b.pow(a).remainder(p);
                                     
                                     System.out.println(" *** Clé obtenue = " + key_a.toString());
                                     
@@ -191,7 +194,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                                     byte[] texteCrypte = chiffrement.doFinal(texteClair);
                                     System.out.println(" *** Texte crypté = " + new String(texteCrypte));
                                     
-                                    loggedIn = true;
+                                    session = rs.getString("id");
                                     rep = new ReponseBISAMAP(ReponseBISAMAP.LOGIN_OK, "", texteCrypte);
                                 }
                                 else
@@ -213,12 +216,37 @@ public class RequeteBISAMAP implements Requete, Serializable {
                 // Affichage des informations
                 String adresseDistante = sock.getRemoteSocketAddress().toString();
                 System.out.println("Début de Get_Next_Bill : adresse distante = " + adresseDistante);
-                // la charge utile est le nom et mot de passe
-                String cu = req.getChargeUtile();
 
-                if(loggedIn) {
+                if(session != null) {
                     cs.TraceEvenements(adresseDistante + "#Facture la plus ancienne non validée#" + Thread.currentThread().getName());
-                    rep = new ReponseBISAMAP(ReponseBISAMAP.GET_NEXT_BILL_OK, null);
+                    try {
+                        ResultSet rs = db.executeRequeteSelection("SELECT * FROM factures WHERE validee = 0 ORDER BY periode ASC");
+                        if(rs.next())
+                        {
+                            String chu = rs.getString("id");
+                            chu += "  " + rs.getString("societe");
+                            chu += "  " + rs.getString("periode");
+                            chu += "  " + rs.getString("total_hors_tva");
+                            chu += "  " + rs.getString("total");
+                            chu += "  " + rs.getString("validee");
+                            chu += "  " + rs.getString("comptable");
+                            chu += "  " + rs.getString("envoyee");
+                            chu += "  " + rs.getString("moyen_envoi");
+                            chu += "  " + rs.getString("payee");
+                            
+                            Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", codeProvider);
+                            chiffrement.init(Cipher.ENCRYPT_MODE, cle);
+                            byte[] texteClair = chu.getBytes();
+                            byte[] texteCrypte = chiffrement.doFinal(texteClair);
+                            System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+                            
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.GET_NEXT_BILL_OK, null, texteCrypte);
+                        }
+                        else
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
+                    } catch (Exception ex) {
+                        rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
+                    }
                 }
                 else
                     rep = new ReponseBISAMAP(ReponseBISAMAP.NOT_LOGGED_IN, null);
@@ -228,11 +256,34 @@ public class RequeteBISAMAP implements Requete, Serializable {
                 String adresseDistante = sock.getRemoteSocketAddress().toString();
                 System.out.println("Début de Validate_Bill : adresse distante = " + adresseDistante);
                 // la charge utile est le nom et mot de passe
-                String facture = req.getChargeUtile();
+                String cu = req.getChargeUtile();
 
-                if(loggedIn) {
-                    cs.TraceEvenements(adresseDistante + "#Validation de " + facture + "#" + Thread.currentThread().getName());
-                    rep = new ReponseBISAMAP(ReponseBISAMAP.VALIDATE_BILL_OK, null);
+                if(session != null) {
+                    String[] parser = cu.split("  ");
+                    
+                    if(parser.length >= 2) {
+                        String operation = parser[0];
+                        String facture = parser[1];
+                        
+                        if("V".equals(operation)) {
+                            cs.TraceEvenements(adresseDistante + "#Validation de " + facture + "#" + Thread.currentThread().getName());
+                            try {
+                                db.executeRequeteMiseAJour("UPDATE factures SET validee = 1, comptable = " + session + " WHERE id = " + facture);
+                                rep = new ReponseBISAMAP(ReponseBISAMAP.VALIDATE_BILL_OK, null);
+                            } catch (Exception ex) {
+                                rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
+                            }
+                        }
+                        else {
+                            cs.TraceEvenements(adresseDistante + "#Invalidation de " + facture + "#" + Thread.currentThread().getName());
+                            try {
+                                db.executeRequeteMiseAJour("DELETE FROM factures WHERE id = " + facture);
+                                rep = new ReponseBISAMAP(ReponseBISAMAP.VALIDATE_BILL_OK, null);
+                            } catch (Exception ex) {
+                                rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
+                            }
+                        }
+                    }
                 }
                 else
                     rep = new ReponseBISAMAP(ReponseBISAMAP.NOT_LOGGED_IN, null);
@@ -244,16 +295,55 @@ public class RequeteBISAMAP implements Requete, Serializable {
                 // la charge utile est le nom et mot de passe
                 String cu = req.getChargeUtile();
 
-                if(loggedIn) {
+                if(session != null) {
                     String[] parser = cu.split("  ");
 
                     if(parser.length >= 3) {
                         String societe = parser[0];
                         String debut = parser[1];
                         String fin = parser[2];
-                        cs.TraceEvenements(adresseDistante + "#Liste des factures de la société " + societe + " entre " + debut + " et " + fin + "#" + Thread.currentThread().getName());    
-                        
-                        rep = new ReponseBISAMAP(ReponseBISAMAP.LIST_BILLS_OK, null);
+                        cs.TraceEvenements(adresseDistante + "#Liste des factures de la société " + societe + " entre " + debut + " et " + fin + "#" + Thread.currentThread().getName());
+                        try {
+                            ResultSet rs = db.executeRequeteSelection("SELECT * FROM factures WHERE periode >= CAST('" + debut + "-01' AS DATE) AND periode <= CAST('" + fin + "-01' AS DATE) AND societe = '" + societe + "'");
+                            if(rs.next())
+                            {
+                                String chu = rs.getString("id");
+                                chu += "  " + rs.getString("societe");
+                                chu += "  " + rs.getString("periode");
+                                chu += "  " + rs.getString("total_hors_tva");
+                                chu += "  " + rs.getString("total");
+                                chu += "  " + rs.getString("validee");
+                                chu += "  " + rs.getString("comptable");
+                                chu += "  " + rs.getString("envoyee");
+                                chu += "  " + rs.getString("moyen_envoi");
+                                chu += "  " + rs.getString("payee");
+
+                                while(rs.next()){
+                                    chu += "::" + rs.getString("id");
+                                    chu += "  " + rs.getString("societe");
+                                    chu += "  " + rs.getString("periode");
+                                    chu += "  " + rs.getString("total_hors_tva");
+                                    chu += "  " + rs.getString("total");
+                                    chu += "  " + rs.getString("validee");
+                                    chu += "  " + rs.getString("comptable");
+                                    chu += "  " + rs.getString("envoyee");
+                                    chu += "  " + rs.getString("moyen_envoi");
+                                    chu += "  " + rs.getString("payee");
+                                }
+                                
+                                Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", codeProvider);
+                                chiffrement.init(Cipher.ENCRYPT_MODE, cle);
+                                byte[] texteClair = chu.getBytes();
+                                byte[] texteCrypte = chiffrement.doFinal(texteClair);
+                                System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+                                
+                                rep = new ReponseBISAMAP(ReponseBISAMAP.LIST_BILLS_OK, null, texteCrypte);
+                            }
+                            else
+                                rep = new ReponseBISAMAP(ReponseBISAMAP.NOT_LOGGED_IN, null);
+                        } catch (Exception ex) {
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
+                        }
                     }
                     else
                         rep = new ReponseBISAMAP(ReponseBISAMAP.INVALID_FORMAT, null);
@@ -268,15 +358,29 @@ public class RequeteBISAMAP implements Requete, Serializable {
                 // la charge utile est le nom et mot de passe
                 String cu = req.getChargeUtile();
 
-                if(loggedIn) {
+                if(session != null) {
                     String[] parser = cu.split("  ");
-                    
-                    Vector<String> factures = new Vector<>();
-                    for(int i = 1; i < parser.length; i++)
-                        factures.add(parser[i]);
                     cs.TraceEvenements(adresseDistante + "#Envoi de factures#" + Thread.currentThread().getName());
-                    
-                    rep = new ReponseBISAMAP(ReponseBISAMAP.SEND_BILLS_OK, null);
+                    if(parser.length > 0) {
+                        String factures = parser[0];
+                        for(int i = 1; i < parser.length; i++)
+                            factures += ", " + parser[i];
+                        
+                        try {
+                            db.executeRequeteMiseAJour("UPDATE factures SET envoyee = 1 WHERE validee = 1 AND comptable = " + session + " AND id NOT IN ( " + factures + ")");
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.SEND_BILLS_OK, null);
+                        } catch (Exception ex) {
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
+                        }
+                    }
+                    else {
+                        try {
+                            db.executeRequeteMiseAJour("UPDATE factures SET envoyee = 1 WHERE validee = 1 AND comptable = " + session);
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.SEND_BILLS_OK, null);
+                        } catch (Exception ex) {
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
+                        }
+                    }
                 }
                 else
                     rep = new ReponseBISAMAP(ReponseBISAMAP.NOT_LOGGED_IN, null);
@@ -286,21 +390,27 @@ public class RequeteBISAMAP implements Requete, Serializable {
                 String adresseDistante = sock.getRemoteSocketAddress().toString();
                 System.out.println("Début de Rec_Pay : adresse distante = " + adresseDistante);
                 // la charge utile est le nom et mot de passe
-                String cu = req.getChargeUtile();
 
-                if(loggedIn) {
-                    String[] parser = cu.split("  ");
-
-                    if(parser.length >= 3) {
-                        String facture = parser[0];
-                        String montant = parser[1];
-                        String infobanc = parser[2];
+                if(session != null) {
+                    
+                    try {
+                        Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", RequeteBISAMAP.codeProvider);
+                        chiffrement.init(Cipher.DECRYPT_MODE, cle);
+                        
+                        byte[] texteCrypte = rep.getDonneesCryptees();
+                        System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+                        byte[] texteClair = chiffrement.doFinal(texteCrypte);
+                        System.out.println(" *** Texte clair = " + new String(texteClair));
+                        
+                        String facture = new String(texteClair);
+                        
                         cs.TraceEvenements(adresseDistante + "#Enregistrement du paiement pour " + facture + "#" + Thread.currentThread().getName());
-
+                        
+                        db.executeRequeteMiseAJour("UPDATE factures SET payee = 1 WHERE id = " + facture);
                         rep = new ReponseBISAMAP(ReponseBISAMAP.REC_PAY_OK, null);
+                    } catch (Exception ex) {
+                        rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
                     }
-                    else
-                        rep = new ReponseBISAMAP(ReponseBISAMAP.INVALID_FORMAT, null);
                 }
                 else
                     rep = new ReponseBISAMAP(ReponseBISAMAP.NOT_LOGGED_IN, null);
@@ -312,17 +422,57 @@ public class RequeteBISAMAP implements Requete, Serializable {
                 // la charge utile est le nom et mot de passe
                 String cu = req.getChargeUtile();
 
-                if(loggedIn) {
+                if(session != null) {
                     String[] parser = cu.split("  ");
-
-                    if(parser.length >= 1) {
-                        String indic = parser[0];
-                        cs.TraceEvenements(adresseDistante + "#Liste des factures non payées#" + Thread.currentThread().getName());
-
-                        rep = new ReponseBISAMAP(ReponseBISAMAP.LIST_WAITING_OK, null);
+                    String indic = cu;
+                    String societe;
+                    if(parser.length >= 2) {
+                        indic = parser[0];
+                        societe = parser[1];
                     }
-                    else
-                        rep = new ReponseBISAMAP(ReponseBISAMAP.INVALID_FORMAT, null);
+                    
+                    cs.TraceEvenements(adresseDistante + "#Liste des factures non payées#" + Thread.currentThread().getName());
+                    try {
+                        ResultSet rs = db.executeRequeteSelection("SELECT * FROM factures WHERE payee = 0");
+                        if(rs.next())
+                        {
+                            String chu = rs.getString("id");
+                            chu += "  " + rs.getString("societe");
+                            chu += "  " + rs.getString("periode");
+                            chu += "  " + rs.getString("total_hors_tva");
+                            chu += "  " + rs.getString("total");
+                            chu += "  " + rs.getString("validee");
+                            chu += "  " + rs.getString("comptable");
+                            chu += "  " + rs.getString("envoyee");
+                            chu += "  " + rs.getString("moyen_envoi");
+                            chu += "  " + rs.getString("payee");
+
+                            while(rs.next()){
+                                chu += "::" + rs.getString("id");
+                                chu += "  " + rs.getString("societe");
+                                chu += "  " + rs.getString("periode");
+                                chu += "  " + rs.getString("total_hors_tva");
+                                chu += "  " + rs.getString("total");
+                                chu += "  " + rs.getString("validee");
+                                chu += "  " + rs.getString("comptable");
+                                chu += "  " + rs.getString("envoyee");
+                                chu += "  " + rs.getString("moyen_envoi");
+                                chu += "  " + rs.getString("payee");
+                            }
+                            
+                            Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", codeProvider);
+                            chiffrement.init(Cipher.ENCRYPT_MODE, cle);
+                            byte[] texteClair = chu.getBytes();
+                            byte[] texteCrypte = chiffrement.doFinal(texteClair);
+                            System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.LIST_WAITING_OK, null, texteCrypte);
+                        }
+                        else
+                            rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
+                    } catch (Exception ex) {
+                        rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
+                    }
                 }
                 else
                     rep = new ReponseBISAMAP(ReponseBISAMAP.NOT_LOGGED_IN, null);

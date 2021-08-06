@@ -113,9 +113,8 @@ public class RequeteCSA implements Requete, Serializable {
                         String user = parser[0];
                         String pass = parser[1];
                         cs.TraceEvenements(adresseDistante + "#Connexion de " + user + "; MDP = " + pass + "#" + Thread.currentThread().getName());
-                        ResultSet rs;
                         try {
-                            rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
+                            ResultSet rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
                             if(rs.next() && pass.equals(rs.getString("pass"))) {
                                 loggedIn = true;
                                 rep = new ReponseCSA(ReponseCSA.LOGINA_OK, null);

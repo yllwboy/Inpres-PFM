@@ -11,8 +11,15 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
 import java.sql.ResultSet;
-import java.util.Vector;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import protocole.ConsoleServeur;
 import protocole.Requete;
 
@@ -23,6 +30,8 @@ import protocole.Requete;
 public class RequetePFMCOP implements Requete, Serializable {
     private static final long serialVersionUID = 6279354070353143569L;
     
+    public static String codeProvider = "BC"; //CryptixCrypto";
+    
     public static int LOGIN_GROUP = 1;
     public static int POST_QUESTION = 2;
     public static int ANSWER_QUESTION = 3;
@@ -30,6 +39,8 @@ public class RequetePFMCOP implements Requete, Serializable {
     
     private int type;
     private String chargeUtile;
+    private byte[] digest;
+    
     private Socket socketClient;
     private ObjectInputStream ois;
 
@@ -46,6 +57,10 @@ public class RequetePFMCOP implements Requete, Serializable {
 
     public String getChargeUtile() {
         return chargeUtile;
+    }
+    
+    public byte[] getDigest() {
+        return digest;
     }
 
     public int getType() {
@@ -79,7 +94,7 @@ public class RequetePFMCOP implements Requete, Serializable {
     }
     
     private void traiteRequeteLogin(Socket sock, ConsoleServeur cs) {
-        BeanBDAccess db = new BeanBDAccess("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost:3306/bd_mouvements", "hector", "WA0UH.nice.key");
+        BeanBDAccess db = new BeanBDAccess("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost:3306/bd_compta", "hector", "WA0UH.nice.key");
         try {
             db.creerConnexionBD();
         }
@@ -104,21 +119,39 @@ public class RequetePFMCOP implements Requete, Serializable {
                 String adresseDistante = sock.getRemoteSocketAddress().toString();
                 System.out.println("Début de Login_Group : adresse distante = " + adresseDistante);
                 // la charge utile est le nom et mot de passe
-                String cu = getChargeUtile();
+                String cu = req.getChargeUtile();
                 
                 if(!loggedIn) {
                     String[] parser = cu.split("  ");
-
-                    if(parser.length >= 2) {
+                    
+                    if(parser.length >= 3) {
                         String user = parser[0];
-                        String pass = parser[1];
-                        cs.TraceEvenements(adresseDistante + "#Connexion de " + user + "; MDP = " + pass + "#" + Thread.currentThread().getName());
-                        ResultSet rs;
+                        String temps = parser[1];
+                        String alea = parser[2];
+                        
+                        cs.TraceEvenements(adresseDistante + "#Connexion de " + user + "#" + Thread.currentThread().getName());
                         try {
-                            rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
-                            if(rs.next() && pass.equals(rs.getString("pass"))) {
-                                loggedIn = true;
-                                rep = new ReponsePFMCOP(ReponsePFMCOP.LOGIN_GROUP_OK, null);
+                            ResultSet rs = db.executeRequeteSelection("SELECT password FROM personnel WHERE login = '" + user + "'");
+                            if(rs.next())
+                            {
+                                String pass = rs.getString("password");
+
+                                // confection d'un digest local
+                                Security.addProvider(new BouncyCastleProvider());
+                                MessageDigest md = MessageDigest.getInstance("SHA-1", codeProvider);
+                                md.update(user.getBytes());
+                                md.update(pass.getBytes());
+                                md.update(temps.getBytes());
+                                md.update(alea.getBytes());
+                                
+                                byte[] msgDLocal = md.digest();
+
+                                if(MessageDigest.isEqual(req.getDigest(), msgDLocal)) {
+                                    loggedIn = true;
+                                    rep = new ReponsePFMCOP(ReponsePFMCOP.LOGIN_GROUP_OK, null);
+                                }
+                                else
+                                    rep = new ReponsePFMCOP(ReponsePFMCOP.WRONG_LOGIN, null);
                             }
                             else
                                 rep = new ReponsePFMCOP(ReponsePFMCOP.WRONG_LOGIN, null);

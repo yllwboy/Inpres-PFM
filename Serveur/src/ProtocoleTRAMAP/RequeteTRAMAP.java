@@ -117,9 +117,8 @@ public class RequeteTRAMAP implements Requete, Serializable {
                         String user = parser[0];
                         String pass = parser[1];
                         cs.TraceEvenements(adresseDistante + "#Connexion de " + user + "; MDP = " + pass + "#" + Thread.currentThread().getName());
-                        ResultSet rs;
                         try {
-                            rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
+                            ResultSet rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
                             if(rs.next() && pass.equals(rs.getString("pass"))) {
                                 loggedIn = true;
                                 rep = new ReponseTRAMAP(ReponseTRAMAP.LOGIN_OK, null);
@@ -166,6 +165,7 @@ public class RequeteTRAMAP implements Requete, Serializable {
                             else {
                                 String x = rs.getString("x");
                                 String y = rs.getString("y");
+                                rep = null;
                                 try {
                                     db.executeRequeteMiseAJour("INSERT INTO containers VALUES (" + container + ", '" + societe + "', '" + contenu + "', " + capacite + ", '" + dangers + "')");
                                 } catch (Exception e) {
@@ -176,16 +176,18 @@ public class RequeteTRAMAP implements Requete, Serializable {
                                         rep = new ReponseTRAMAP(ReponseTRAMAP.SQL_ERROR, ex.getMessage());
                                     }
                                 }
-                                rs = db.executeRequeteSelection("SELECT * FROM mouvements WHERE dateDepart IS NULL AND container = " + container);
-                                if(rs.next())
-                                    rep = new ReponseTRAMAP(ReponseTRAMAP.CONTAINER_ALREADY_PRESENT, null);
-                                else {
-                                    try {
-                                        db.executeRequeteMiseAJour("INSERT INTO mouvements (container, transEntrant, dateArrivee, poids, destination) VALUES (" + container + ", '" + transEntrant + "', CAST('" + dateArrivee + "' AS DATE), " + poids + ", " + destination + ")");
-                                        rep = new ReponseTRAMAP(ReponseTRAMAP.INPUT_LORRY_OK, x + ", " + y);
-                                    } catch (Exception ex) {
-                                        System.err.println("Erreur ? [" + ex.getMessage() + "]");
-                                        rep = new ReponseTRAMAP(ReponseTRAMAP.SQL_ERROR, ex.getMessage());
+                                if(rep == null) {
+                                    rs = db.executeRequeteSelection("SELECT * FROM mouvements WHERE dateDepart IS NULL AND container = " + container);
+                                    if(rs.next())
+                                        rep = new ReponseTRAMAP(ReponseTRAMAP.CONTAINER_ALREADY_PRESENT, null);
+                                    else {
+                                        try {
+                                            db.executeRequeteMiseAJour("INSERT INTO mouvements (container, transEntrant, dateArrivee, poids, destination) VALUES (" + container + ", '" + transEntrant + "', CAST('" + dateArrivee + "' AS DATE), " + poids + ", " + destination + ")");
+                                            rep = new ReponseTRAMAP(ReponseTRAMAP.INPUT_LORRY_OK, x + ", " + y);
+                                        } catch (Exception ex) {
+                                            System.err.println("Erreur ? [" + ex.getMessage() + "]");
+                                            rep = new ReponseTRAMAP(ReponseTRAMAP.SQL_ERROR, ex.getMessage());
+                                        }
                                     }
                                 }
                             }
@@ -305,8 +307,8 @@ public class RequeteTRAMAP implements Requete, Serializable {
                         String finIntervalle = parser[2];
                         String critere = parser[3];
                         cs.TraceEvenements(adresseDistante + "#Liste des mouvements entre " + debutIntervalle + " et " + finIntervalle + " concernant " + critere + "#" + Thread.currentThread().getName());
-                        ResultSet rs;
                         try {
+                            ResultSet rs;
                             if(type.equals("D"))
                                 rs = db.executeRequeteSelection("SELECT * FROM mouvements WHERE dateArrivee >= CAST('" + debutIntervalle + "' AS DATE) AND dateDepart <= CAST('" + finIntervalle + "' AS DATE) AND destination = " + critere);
                             else {
@@ -359,9 +361,8 @@ public class RequeteTRAMAP implements Requete, Serializable {
                         String user = parser[0];
                         String pass = parser[1];
                         cs.TraceEvenements(adresseDistante + "#Déconnexion de " + user + "; MDP = " + pass + "#" + Thread.currentThread().getName());
-                        ResultSet rs;
                         try {
-                            rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
+                            ResultSet rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
                             if(rs.next() && pass.equals(rs.getString("pass")))
                             {
                                 loggedIn = false;
@@ -390,11 +391,10 @@ public class RequeteTRAMAP implements Requete, Serializable {
                     String[] parser = cu.split("  ");
 
                     if(parser.length >= 1) {
-                        String type = parser[0];
+                        String operation = parser[0];
                         cs.TraceEvenements(adresseDistante + "#Ajout dans la base de données d'un tuple#" + Thread.currentThread().getName());
-                        ResultSet rs;
                         try {
-                            if(type.equals("S")) {
+                            if(operation.equals("S")) {
                                 String idS = null, nomS = null, emailS = null, telephoneS = null, adresseS = null;
                                 if(parser.length >= 6) {
                                     idS = parser[1];
@@ -405,7 +405,7 @@ public class RequeteTRAMAP implements Requete, Serializable {
                                 }
                                 db.executeRequeteMiseAJour("INSERT INTO societes VALUES ('" + idS + "', '" + nomS + "', '" + emailS + "', '" + telephoneS + "', '" + adresseS + "')");
                             }
-                            else if(type.equals("T")) {
+                            else if(operation.equals("T")) {
                                 String idT = null, proprietaireT = null, capaciteT = null, caracTechT = null;
                                 if(parser.length >= 5) {
                                     idT = parser[1];

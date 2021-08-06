@@ -7,22 +7,16 @@ package ProtocolePLAMAP;
 
 import ProtocoleCHAMAP.ReponseCHAMAP;
 import ProtocoleCHAMAP.RequeteCHAMAP;
-import static ProtocoleTRAMAP.RequeteTRAMAP.codeProvider;
 import beansForJdbc.BeanBDAccess;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
-import java.security.MessageDigest;
 import java.sql.ResultSet;
-import java.util.Date;
 import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import protocole.ConsoleServeur;
 import protocole.Requete;
 
@@ -41,7 +35,8 @@ public class RequetePLAMAP implements Requete, Serializable {
     
     private int type;
     private String chargeUtile;
-    private Socket socketClient;
+    private ObjectOutputStream cli_oos;
+    private ObjectInputStream cli_ois;
     private BufferedReader in;
 
     public RequetePLAMAP(String chu) {
@@ -85,12 +80,12 @@ public class RequetePLAMAP implements Requete, Serializable {
         this.in = in;
     }
 
-    public Socket getSocketClient() {
-        return socketClient;
+    public void setCli_oos(ObjectOutputStream cli_oos) {
+        this.cli_oos = cli_oos;
     }
 
-    public void setSocketClient(Socket socketClient) {
-        this.socketClient = socketClient;
+    public void setCli_ois(ObjectInputStream cli_ois) {
+        this.cli_ois = cli_ois;
     }
     
     @Override
@@ -130,19 +125,10 @@ public class RequetePLAMAP implements Requete, Serializable {
             return;
         }
         RequetePLAMAP req = this;
-        String rep = "";
+        String rep;
         
-        ObjectOutputStream cli_oos;
-        ObjectInputStream cli_ois;
-        try {
-            cli_oos = new ObjectOutputStream(socketClient.getOutputStream());
-            cli_ois = new ObjectInputStream(socketClient.getInputStream());
-        } catch (IOException e) {
-            System.err.println("Erreur ? [" + e.getMessage() + "]");
-            return;
-        }
-        RequeteCHAMAP cli_req = null;
-        ReponseCHAMAP cli_rep = null;
+        RequeteCHAMAP cli_req;
+        ReponseCHAMAP cli_rep;
         
         while(true) {
             if(req.getType() == RequetePLAMAP.LOGIN_CONT) {
@@ -158,9 +144,8 @@ public class RequetePLAMAP implements Requete, Serializable {
                         String user = parser[0];
                         String pass = parser[1];
                         cs.TraceEvenements(adresseDistante + "#Connexion de " + user + "; MDP = " + pass + "#" + Thread.currentThread().getName());
-                        ResultSet rs;
                         try {
-                            rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
+                            ResultSet rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
                             if(rs.next() && pass.equals(rs.getString("pass"))) {
                                 loggedIn = true;
                                 rep = "LOGIN_CONT_OK";

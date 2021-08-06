@@ -6,10 +6,9 @@
 package application_compta;
 
 import ProtocoleBISAMAP.*;
+import static ProtocoleBISAMAP.RequeteBISAMAP.codeProvider;
 import java.io.*;
-import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.RoundingMode;
 import java.net.*;
 import java.security.*;
 import java.util.Date;
@@ -17,6 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+import javax.swing.table.DefaultTableModel;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
@@ -58,6 +58,22 @@ public class Application_Compta extends javax.swing.JFrame {
         TFPass = new javax.swing.JTextField();
         jScrollPane1 = new javax.swing.JScrollPane();
         TAReponse = new javax.swing.JTextArea();
+        BGetNextBill = new javax.swing.JButton();
+        BValidateBill = new javax.swing.JButton();
+        BListBills = new javax.swing.JButton();
+        BSendBills = new javax.swing.JButton();
+        BRecPay = new javax.swing.JButton();
+        BListWaiting = new javax.swing.JButton();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        TFactures = new javax.swing.JTable();
+        CBCritere = new javax.swing.JComboBox<>();
+        BInvalidateBill = new javax.swing.JButton();
+        TFDebut = new javax.swing.JTextField();
+        jLabel5 = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
+        TFFin = new javax.swing.JTextField();
+        jLabel8 = new javax.swing.JLabel();
+        TFSociete = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -96,31 +112,156 @@ public class Application_Compta extends javax.swing.JFrame {
         TAReponse.setRows(5);
         jScrollPane1.setViewportView(TAReponse);
 
+        BGetNextBill.setText("Obtenir la prochaine facture");
+        BGetNextBill.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BGetNextBillActionPerformed(evt);
+            }
+        });
+
+        BValidateBill.setText("Valider la facture");
+        BValidateBill.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BValidateBillActionPerformed(evt);
+            }
+        });
+
+        BListBills.setText("Charger liste des factures");
+        BListBills.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BListBillsActionPerformed(evt);
+            }
+        });
+
+        BSendBills.setText("Envoyer les factures validées");
+        BSendBills.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BSendBillsActionPerformed(evt);
+            }
+        });
+
+        BRecPay.setText("Payer la facture sélectionnée");
+        BRecPay.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BRecPayActionPerformed(evt);
+            }
+        });
+
+        BListWaiting.setText("Charger factures non payées");
+        BListWaiting.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BListWaitingActionPerformed(evt);
+            }
+        });
+
+        TFactures.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+                {null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null, null, null, null}
+            },
+            new String [] {
+                "Identifiant", "Société", "Période", "Total hors TVA", "Total", "Validée", "Comptable validateur", "Envoyée", "Moyen d'envoi", "Payée"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        TFactures.setColumnSelectionAllowed(true);
+        TFactures.getTableHeader().setReorderingAllowed(false);
+        jScrollPane2.setViewportView(TFactures);
+        TFactures.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+
+        CBCritere.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Toutes", "Société donnée", "Émises depuis plus d'un mois" }));
+
+        BInvalidateBill.setText("Invalider la facture");
+        BInvalidateBill.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BInvalidateBillActionPerformed(evt);
+            }
+        });
+
+        TFDebut.setText("1996-09");
+
+        jLabel5.setText("Début de l'intervalle :");
+
+        jLabel6.setText("Fin de l'intervalle :");
+
+        TFFin.setText("2021-09");
+
+        jLabel8.setText("Société :");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 376, Short.MAX_VALUE)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(BConnexion)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(BDeconnexion))
-                    .addGroup(layout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel4)
                             .addComponent(jLabel3)
                             .addComponent(jLabel2)
                             .addComponent(jLabel1))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGap(14, 14, 14)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(TFAdresse)
                             .addComponent(TFPort)
                             .addComponent(TFUser)
-                            .addComponent(TFPass))))
+                            .addComponent(TFPass)))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jScrollPane2)
+                            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(BGetNextBill, javax.swing.GroupLayout.PREFERRED_SIZE, 243, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(BValidateBill, javax.swing.GroupLayout.PREFERRED_SIZE, 243, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(BInvalidateBill, javax.swing.GroupLayout.PREFERRED_SIZE, 243, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(BSendBills, javax.swing.GroupLayout.PREFERRED_SIZE, 243, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(0, 0, Short.MAX_VALUE)
+                                .addComponent(BConnexion, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(BDeconnexion))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addComponent(BRecPay)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(CBCritere, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addGap(0, 0, Short.MAX_VALUE)
+                                        .addComponent(jLabel8)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(TFSociete, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(jLabel5)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(TFDebut, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                        .addComponent(jLabel6)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(TFFin, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(BListBills, javax.swing.GroupLayout.PREFERRED_SIZE, 243, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(BListWaiting, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 243, javax.swing.GroupLayout.PREFERRED_SIZE))))))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -142,12 +283,34 @@ public class Application_Compta extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel4)
                     .addComponent(TFPass, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(BDeconnexion)
+                    .addComponent(BConnexion))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(BConnexion)
-                    .addComponent(BDeconnexion))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 63, Short.MAX_VALUE)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 73, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(BSendBills)
+                    .addComponent(BGetNextBill)
+                    .addComponent(BValidateBill)
+                    .addComponent(BInvalidateBill))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel5)
+                    .addComponent(TFDebut, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(TFFin, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel6)
+                    .addComponent(BListBills)
+                    .addComponent(jLabel8)
+                    .addComponent(TFSociete, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(BRecPay)
+                    .addComponent(CBCritere, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(BListWaiting))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 182, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 150, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -208,13 +371,13 @@ public class Application_Compta extends javax.swing.JFrame {
         }
         catch (IOException e) {
             TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
+            return;
         }
         
         // Lecture de la réponse
-        ReponseBISAMAP rep = null;
         try {
             ois = new ObjectInputStream(cliSock.getInputStream());
-            rep = (ReponseBISAMAP)ois.readObject();
+            ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
             
             if(rep.getCode() == ReponseBISAMAP.LOGIN_OK) {
                 TAReponse.setText(" *** Reponse reçue : Connexion réussie");
@@ -233,7 +396,7 @@ public class Application_Compta extends javax.swing.JFrame {
                     oos.writeObject(req);
                     oos.flush();
                     
-                    BigInteger key_b = pubkey_a.pow(b).remainder(p).remainder(new BigInteger("100000000"));
+                    BigInteger key_b = pubkey_a.pow(b).remainder(p);
                     System.out.println(" *** Clé obtenue = " + key_b.toString());
                     cle = new SecretKeySpec(key_b.toString().getBytes(), "DES");
                     
@@ -280,6 +443,360 @@ public class Application_Compta extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_BDeconnexionActionPerformed
 
+    private void BGetNextBillActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BGetNextBillActionPerformed
+        if(cliSock == null)
+            return;
+        
+        // Envoi de la requête
+        try {
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.GET_NEXT_BILL, null));
+            oos.flush();
+        }
+        catch (IOException e) {
+            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
+            return;
+        }
+        
+        // Lecture de la réponse
+        try {
+            ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
+            
+            if(rep.getCode() == ReponseBISAMAP.GET_NEXT_BILL_OK) {
+                TAReponse.setText(" *** Reponse reçue : Facture reçue");
+                
+                Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", RequeteBISAMAP.codeProvider);
+                chiffrement.init(Cipher.DECRYPT_MODE, cle);
+
+                byte[] texteCrypte = rep.getDonneesCryptees();
+                System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+                byte[] texteClair = chiffrement.doFinal(texteCrypte);
+                System.out.println(" *** Texte clair = " + new String(texteClair));
+
+                String[] parser = new String(texteClair).split("  ");
+                
+                if(parser.length >= 10) {
+                    DefaultTableModel model = (DefaultTableModel)TFactures.getModel();
+                    model.setRowCount(0);
+                    model.addRow(parser);
+                }
+            }
+            else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
+                TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
+            else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
+                TAReponse.setText(" *** Reponse reçue : Le format de la commande est invalide");
+            else if(rep.getCode() == ReponseBISAMAP.UNKNOWN_TYPE)
+                TAReponse.setText(" *** Reponse reçue : La commande est inconnue");
+            else if(rep.getCode() == ReponseBISAMAP.SERVER_FAIL)
+                TAReponse.setText(" *** Reponse reçue : Erreur système du serveur");
+            else
+                TAReponse.setText(" *** Reponse reçue : " + rep.getChargeUtile());
+        }
+        catch (ClassNotFoundException e) {
+            TAReponse.setText("--- erreur sur la classe = " + e.getMessage());
+        }
+        catch (IOException e) {
+            TAReponse.setText("--- erreur IO = " + e.getMessage());
+        } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+            TAReponse.setText("--- erreur cryptage = " + e.getMessage());
+        }
+    }//GEN-LAST:event_BGetNextBillActionPerformed
+
+    private void BValidateBillActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BValidateBillActionPerformed
+        if(cliSock == null)
+            return;
+        
+        // Envoi de la requête
+        try {
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.VALIDATE_BILL, "V  " + TFactures.getValueAt(TFactures.getSelectedRow(), 0)));
+            oos.flush();
+        }
+        catch (IOException e) {
+            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
+            return;
+        }
+        
+        // Lecture de la réponse
+        try {
+            ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
+            
+            if(rep.getCode() == ReponseBISAMAP.VALIDATE_BILL_OK)
+                TAReponse.setText(" *** Reponse reçue : Facture validée");
+            else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
+                TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
+            else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
+                TAReponse.setText(" *** Reponse reçue : Le format de la commande est invalide");
+            else if(rep.getCode() == ReponseBISAMAP.UNKNOWN_TYPE)
+                TAReponse.setText(" *** Reponse reçue : La commande est inconnue");
+            else if(rep.getCode() == ReponseBISAMAP.SERVER_FAIL)
+                TAReponse.setText(" *** Reponse reçue : Erreur système du serveur");
+            else
+                TAReponse.setText(" *** Reponse reçue : " + rep.getChargeUtile());
+        }
+        catch (ClassNotFoundException e) {
+            TAReponse.setText("--- erreur sur la classe = " + e.getMessage());
+        }
+        catch (IOException e) {
+            TAReponse.setText("--- erreur IO = " + e.getMessage());
+        }
+    }//GEN-LAST:event_BValidateBillActionPerformed
+
+    private void BInvalidateBillActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BInvalidateBillActionPerformed
+        if(cliSock == null)
+            return;
+        
+        // Envoi de la requête
+        try {
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.VALIDATE_BILL, "I  " + TFactures.getValueAt(TFactures.getSelectedRow(), 0)));
+            oos.flush();
+        }
+        catch (IOException e) {
+            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
+            return;
+        }
+        
+        // Lecture de la réponse
+        try {
+            ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
+            
+            if(rep.getCode() == ReponseBISAMAP.VALIDATE_BILL_OK)
+                TAReponse.setText(" *** Reponse reçue : Facture validée");
+            else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
+                TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
+            else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
+                TAReponse.setText(" *** Reponse reçue : Le format de la commande est invalide");
+            else if(rep.getCode() == ReponseBISAMAP.UNKNOWN_TYPE)
+                TAReponse.setText(" *** Reponse reçue : La commande est inconnue");
+            else if(rep.getCode() == ReponseBISAMAP.SERVER_FAIL)
+                TAReponse.setText(" *** Reponse reçue : Erreur système du serveur");
+            else
+                TAReponse.setText(" *** Reponse reçue : " + rep.getChargeUtile());
+        }
+        catch (ClassNotFoundException e) {
+            TAReponse.setText("--- erreur sur la classe = " + e.getMessage());
+        }
+        catch (IOException e) {
+            TAReponse.setText("--- erreur IO = " + e.getMessage());
+        }
+    }//GEN-LAST:event_BInvalidateBillActionPerformed
+
+    private void BSendBillsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BSendBillsActionPerformed
+        if(cliSock == null)
+            return;
+        
+        // Envoi de la requête
+        try {
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.SEND_BILLS, ""));
+            oos.flush();
+        }
+        catch (IOException e) {
+            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
+            return;
+        }
+        
+        // Lecture de la réponse
+        try {
+            ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
+            
+            if(rep.getCode() == ReponseBISAMAP.SEND_BILLS_OK)
+                TAReponse.setText(" *** Reponse reçue : Factures envoyées");
+            else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
+                TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
+            else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
+                TAReponse.setText(" *** Reponse reçue : Le format de la commande est invalide");
+            else if(rep.getCode() == ReponseBISAMAP.UNKNOWN_TYPE)
+                TAReponse.setText(" *** Reponse reçue : La commande est inconnue");
+            else if(rep.getCode() == ReponseBISAMAP.SERVER_FAIL)
+                TAReponse.setText(" *** Reponse reçue : Erreur système du serveur");
+            else
+                TAReponse.setText(" *** Reponse reçue : " + rep.getChargeUtile());
+        }
+        catch (ClassNotFoundException e) {
+            TAReponse.setText("--- erreur sur la classe = " + e.getMessage());
+        }
+        catch (IOException e) {
+            TAReponse.setText("--- erreur IO = " + e.getMessage());
+        }
+    }//GEN-LAST:event_BSendBillsActionPerformed
+
+    private void BListBillsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BListBillsActionPerformed
+        if(cliSock == null)
+            return;
+        
+        // Envoi de la requête
+        try {
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.LIST_BILLS, TFSociete.getText() + "  " + TFDebut.getText() + "  " + TFFin.getText()));
+            oos.flush();
+        }
+        catch (IOException e) {
+            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
+            return;
+        }
+        
+        // Lecture de la réponse
+        try {
+            ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
+            
+            if(rep.getCode() == ReponseBISAMAP.LIST_BILLS_OK) {
+                TAReponse.setText(" *** Reponse reçue : Liste des factures reçue");
+                
+                Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", RequeteBISAMAP.codeProvider);
+                chiffrement.init(Cipher.DECRYPT_MODE, cle);
+
+                byte[] texteCrypte = rep.getDonneesCryptees();
+                System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+                byte[] texteClair = chiffrement.doFinal(texteCrypte);
+                System.out.println(" *** Texte clair = " + new String(texteClair));
+                
+                String chu = new String(texteClair);
+                String[] parser = chu.split("::");
+                
+                DefaultTableModel model = (DefaultTableModel)TFactures.getModel();
+                model.setRowCount(0);
+                if(parser.length >= 2) {
+                    for (String row : parser)
+                        model.addRow(row.split("  "));
+                }
+                else
+                    model.addRow(chu.split("  "));
+            }
+            else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
+                TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
+            else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
+                TAReponse.setText(" *** Reponse reçue : Le format de la commande est invalide");
+            else if(rep.getCode() == ReponseBISAMAP.UNKNOWN_TYPE)
+                TAReponse.setText(" *** Reponse reçue : La commande est inconnue");
+            else if(rep.getCode() == ReponseBISAMAP.SERVER_FAIL)
+                TAReponse.setText(" *** Reponse reçue : Erreur système du serveur");
+            else
+                TAReponse.setText(" *** Reponse reçue : " + rep.getChargeUtile());
+        }
+        catch (ClassNotFoundException e) {
+            TAReponse.setText("--- erreur sur la classe = " + e.getMessage());
+        }
+        catch (IOException e) {
+            TAReponse.setText("--- erreur IO = " + e.getMessage());
+        } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+            TAReponse.setText("--- erreur cryptage = " + e.getMessage());
+        }
+    }//GEN-LAST:event_BListBillsActionPerformed
+
+    private void BRecPayActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BRecPayActionPerformed
+        if(cliSock == null)
+            return;
+        
+        RequeteBISAMAP req;
+        try {
+            Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", codeProvider);
+            chiffrement.init(Cipher.ENCRYPT_MODE, cle);
+            String id = (String) TFactures.getValueAt(TFactures.getSelectedRow(), 0);
+            byte[] texteClair = id.getBytes();
+            byte[] texteCrypte = chiffrement.doFinal(texteClair);
+            System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+
+            req = new RequeteBISAMAP(RequeteBISAMAP.REC_PAY, null, texteCrypte);
+        } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
+            TAReponse.setText("--- erreur cryptage = " + ex.getMessage());
+            return;
+        }
+        
+        
+        // Envoi de la requête
+        try {
+            oos.writeObject(req);
+            oos.flush();
+        }
+        catch (IOException e) {
+            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
+            return;
+        }
+        
+        // Lecture de la réponse
+        try {
+            ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
+            
+            if(rep.getCode() == ReponseBISAMAP.REC_PAY_OK)
+                TAReponse.setText(" *** Reponse reçue : Facture payée");
+            else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
+                TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
+            else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
+                TAReponse.setText(" *** Reponse reçue : Le format de la commande est invalide");
+            else if(rep.getCode() == ReponseBISAMAP.UNKNOWN_TYPE)
+                TAReponse.setText(" *** Reponse reçue : La commande est inconnue");
+            else if(rep.getCode() == ReponseBISAMAP.SERVER_FAIL)
+                TAReponse.setText(" *** Reponse reçue : Erreur système du serveur");
+            else
+                TAReponse.setText(" *** Reponse reçue : " + rep.getChargeUtile());
+        }
+        catch (ClassNotFoundException e) {
+            TAReponse.setText("--- erreur sur la classe = " + e.getMessage());
+        }
+        catch (IOException e) {
+            TAReponse.setText("--- erreur IO = " + e.getMessage());
+        }
+    }//GEN-LAST:event_BRecPayActionPerformed
+
+    private void BListWaitingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BListWaitingActionPerformed
+        if(cliSock == null)
+            return;
+        
+        // Envoi de la requête
+        try {
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.LIST_WAITING, "T"));
+            oos.flush();
+        }
+        catch (IOException e) {
+            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
+            return;
+        }
+        
+        // Lecture de la réponse
+        try {
+            ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
+            
+            if(rep.getCode() == ReponseBISAMAP.LIST_WAITING_OK) {
+                TAReponse.setText(" *** Reponse reçue : Liste des factures non payées reçue");
+                
+                Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", RequeteBISAMAP.codeProvider);
+                chiffrement.init(Cipher.DECRYPT_MODE, cle);
+
+                byte[] texteCrypte = rep.getDonneesCryptees();
+                System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+                byte[] texteClair = chiffrement.doFinal(texteCrypte);
+                System.out.println(" *** Texte clair = " + new String(texteClair));
+                
+                String chu = new String(texteClair);
+                String[] parser = chu.split("::");
+                
+                DefaultTableModel model = (DefaultTableModel)TFactures.getModel();
+                model.setRowCount(0);
+                if(parser.length >= 2) {
+                    for (String row : parser)
+                        model.addRow(row.split("  "));
+                }
+                else
+                    model.addRow(chu.split("  "));
+            }
+            else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
+                TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
+            else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
+                TAReponse.setText(" *** Reponse reçue : Le format de la commande est invalide");
+            else if(rep.getCode() == ReponseBISAMAP.UNKNOWN_TYPE)
+                TAReponse.setText(" *** Reponse reçue : La commande est inconnue");
+            else if(rep.getCode() == ReponseBISAMAP.SERVER_FAIL)
+                TAReponse.setText(" *** Reponse reçue : Erreur système du serveur");
+            else
+                TAReponse.setText(" *** Reponse reçue : " + rep.getChargeUtile());
+        }
+        catch (ClassNotFoundException e) {
+            TAReponse.setText("--- erreur sur la classe = " + e.getMessage());
+        }
+        catch (IOException e) {
+            TAReponse.setText("--- erreur IO = " + e.getMessage());
+        } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+            TAReponse.setText("--- erreur cryptage = " + e.getMessage());
+        }
+    }//GEN-LAST:event_BListWaitingActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -318,15 +835,31 @@ public class Application_Compta extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton BConnexion;
     private javax.swing.JButton BDeconnexion;
+    private javax.swing.JButton BGetNextBill;
+    private javax.swing.JButton BInvalidateBill;
+    private javax.swing.JButton BListBills;
+    private javax.swing.JButton BListWaiting;
+    private javax.swing.JButton BRecPay;
+    private javax.swing.JButton BSendBills;
+    private javax.swing.JButton BValidateBill;
+    private javax.swing.JComboBox<String> CBCritere;
     private javax.swing.JTextArea TAReponse;
     private javax.swing.JTextField TFAdresse;
+    private javax.swing.JTextField TFDebut;
+    private javax.swing.JTextField TFFin;
     private javax.swing.JTextField TFPass;
     private javax.swing.JTextField TFPort;
+    private javax.swing.JTextField TFSociete;
     private javax.swing.JTextField TFUser;
+    private javax.swing.JTable TFactures;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel8;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     // End of variables declaration//GEN-END:variables
 }

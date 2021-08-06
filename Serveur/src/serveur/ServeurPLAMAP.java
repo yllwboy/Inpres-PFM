@@ -166,7 +166,8 @@ public class ServeurPLAMAP extends ThreadServeur {
                 System.out.println(chu);
                 RequetePLAMAP req = new RequetePLAMAP(chu.split("\r\n")[0]);
                 req.setIn(inFromServer);
-                req.setSocketClient(socketClient);
+                req.setCli_ois(ois);
+                req.setCli_oos(oos);
                 
                 Runnable travail = req.createRunnable(CSocket, guiApplication);
                 if (travail != null) {
