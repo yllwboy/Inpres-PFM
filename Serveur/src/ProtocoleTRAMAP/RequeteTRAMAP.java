@@ -239,7 +239,6 @@ public class RequeteTRAMAP implements Requete, Serializable {
                                 rep = new ReponseTRAMAP(ReponseTRAMAP.CONTAINER_ALREADY_PRESENT, null);
                             else {
                                 try {
-                                    
                                     db.executeRequeteMiseAJour("INSERT INTO mouvements (container, transEntrant, dateArrivee, poids, destination) VALUES (" + container + ", '" + transEntrant + "', CAST('" + dateArrivee + "' AS DATE), " + poids + ", " + destination + ")");
                                     rep = new ReponseTRAMAP(ReponseTRAMAP.INPUT_LORRY_WITHOUT_RESERVATION_OK, "1, 1");
                                 } catch (Exception ex) {

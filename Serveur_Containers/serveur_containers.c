@@ -374,8 +374,8 @@ void *fctThread(void *param)
 							// 	fwrite(c, sizeof(container), 1, f);
 								
 							// 	puts(idContainer);
-							// 	sprintf(msgServeur, "oui: %u, %u", c->x, c->y);
-							// 	etat = 2;
+							//	sprintf(msgServeur, "oui: %u, %u", c->x, c->y);
+							etat = 2;
 							// }
 							// else
 							// 	sprintf(msgServeur, "non: pas d'emplacements libres");
@@ -444,8 +444,8 @@ void *fctThread(void *param)
 								// 	fseek(f, -sizeof(container), SEEK_CUR);
 								// 	fwrite(c, sizeof(container), 1, f);
 									
-								// 	sprintf(msgServeur, "oui");
-								// 	etat = 1;
+								//  sprintf(msgServeur, "oui");
+								etat = 1;
 								// }
 								// else
 								// 	sprintf(msgServeur, "non: erreur dans la recherche du container");
@@ -481,7 +481,9 @@ void *fctThread(void *param)
 							sprintf(msgMouv, "GET_LIST::");
 							strcat(msgMouv, idTransport);
 							strcat(msgMouv, SEPARATEUR);
-							strcat(msgMouv, idContainer);
+							strcat(msgMouv, destination);
+							strcat(msgMouv, SEPARATEUR);
+							strcat(msgMouv, capMax);
 							strcat(msgMouv, TERMINATEUR);
 							
 							if(send(hSocketMouv, msgMouv, strlen(msgMouv), 0) == -1)
@@ -500,6 +502,11 @@ void *fctThread(void *param)
 								etat = -1;
 								break;
 							}
+
+							sprintf(msgMouv, "SIGNAL_DEP::");
+							strcat(msgMouv, idTransport);
+
+
 							// FILE *f = fopen("FICH_PARC", "rb");
 							// if(f == NULL)
 							// 	close(hSocketServ);
@@ -527,7 +534,7 @@ void *fctThread(void *param)
 							// if(containerTrouve)
 							// {
 							// 	msgServeur[strlen(msgServeur) - 1] = 0;
-							// 	etat = 3;
+							etat = 3;
 							// }
 							// else
 							// 	sprintf(msgServeur, "non: aucun container trouve");
@@ -555,31 +562,34 @@ void *fctThread(void *param)
 						if(idC != NULL)
 						{
 							pthread_mutex_lock(&mutexFichParc);
-							FILE *f = fopen("FICH_PARC", "r+b");
-							if(f == NULL)
-								close(hSocketServ);
+							strcat(msgMouv, SEPARATEUR);
+							strcat(msgMouv, idC);
 							
-							container *c = (container *)malloc(sizeof(container));
+							// FILE *f = fopen("FICH_PARC", "r+b");
+							// if(f == NULL)
+							// 	close(hSocketServ);
 							
-							c->identifiant[0] = 0;
+							// container *c = (container *)malloc(sizeof(container));
 							
-							while(!c->etat || (!feof(f) && strcmp(c->identifiant, idC)))
-								fread(c, sizeof(container), 1, f);
+							// c->identifiant[0] = 0;
 							
-							if(c->etat && !strcmp(c->identifiant, idC))
-							{
-								c->etat = 0;
+							// while(!c->etat || (!feof(f) && strcmp(c->identifiant, idC)))
+							// 	fread(c, sizeof(container), 1, f);
+							
+							// if(c->etat && !strcmp(c->identifiant, idC))
+							// {
+							// 	c->etat = 0;
 								
-								fseek(f, -sizeof(container), SEEK_CUR);
-								fwrite(c, sizeof(container), 1, f);
+							// 	fseek(f, -sizeof(container), SEEK_CUR);
+							// 	fwrite(c, sizeof(container), 1, f);
 								
-								sprintf(msgServeur, "oui");
-								etat = 4;
-							}
-							else
-								sprintf(msgServeur, "non: container inconnu");
+							sprintf(msgServeur, "oui");
+							etat = 4;
+							// }
+							// else
+							// 	sprintf(msgServeur, "non: container inconnu");
 							
-							fclose(f);
+							// fclose(f);
 							pthread_mutex_unlock(&mutexFichParc);
 						}
 						else
@@ -593,29 +603,48 @@ void *fctThread(void *param)
 				{
 					if(etat == 4)
 					{
-						char *idT = strtok(NULL, SEPARATEUR);
-						nbContainers = strtok(NULL, SEPARATEUR);
-						
-						if(idT != NULL && nbContainers != NULL)
+						strcat(msgMouv, TERMINATEUR);
+
+						if(send(hSocketMouv, msgMouv, strlen(msgMouv), 0) == -1)
 						{
-							strncpy(idTransport, idT, (MAXSTRING - 1) * sizeof(char));
-							idTransport[MAXSTRING - 1] = 0;
-							
-							unsigned int n, max;
-							
-							sscanf(nbContainers, "%u", &n);
-							sscanf(capMax, "%u", &max);
-							
-							if(n == max)
-							{
-								sprintf(msgServeur, "oui");
-								etat = 1;
-							}
-							else
-								sprintf(msgServeur, "non: incoherence detectee");
+							printf("Erreur sur le send de la socket %d\n", errno);
+							close(hSocketMouv);
+							exit(1);
 						}
-						else
-							sprintf(msgServeur, "non: commande malformee");
+						else printf("Send socket OK\n");
+
+						retRecv = recvGrosMsg(hSocketMouv, msgServeur, MAXSTRING);
+						if(!retRecv)
+						{
+							sprintf(buf,"Le client est parti !!!");
+							affThread(numThr, buf);
+							etat = -1;
+							break;
+						}
+
+						// char *idT = strtok(NULL, SEPARATEUR);
+						// nbContainers = strtok(NULL, SEPARATEUR);
+						
+						// if(idT != NULL && nbContainers != NULL)
+						// {
+						// 	strncpy(idTransport, idT, (MAXSTRING - 1) * sizeof(char));
+						// 	idTransport[MAXSTRING - 1] = 0;
+							
+						// 	unsigned int n, max;
+							
+						// 	sscanf(nbContainers, "%u", &n);
+						// 	sscanf(capMax, "%u", &max);
+							
+						// 	if(n == max)
+						// 	{
+						// 		sprintf(msgServeur, "oui");
+						// 		etat = 1;
+						// 	}
+						// 	else
+						// 		sprintf(msgServeur, "non: incoherence detectee");
+						// }
+						// else
+						// 	sprintf(msgServeur, "non: commande malformee");
 					}
 					else
 						sprintf(msgServeur, "non: vous devez executer OUTPUT-ONE d'abord");

@@ -19,11 +19,13 @@ public class ReponseBISAMAP implements Reponse, Serializable {
     public static int WRONG_LOGIN = 101;
     public static int ALREADY_LOGGED_IN = 102;
     public static int GET_NEXT_BILL_OK = 200;
+    public static int NO_BILL = 201;
     public static int VALIDATE_BILL_OK = 300;
     public static int LIST_BILLS_OK = 400;
     public static int SEND_BILLS_OK = 500;
     public static int REC_PAY_OK = 600;
     public static int LIST_WAITING_OK = 700;
+    public static int BAD_SIGNATURE = 996;
     public static int NOT_LOGGED_IN = 997;
     public static int INVALID_FORMAT = 998;
     public static int UNKNOWN_TYPE = 999;

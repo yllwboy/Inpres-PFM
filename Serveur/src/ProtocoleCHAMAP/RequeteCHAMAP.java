@@ -12,7 +12,8 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
 import java.security.*;
-import java.util.Vector;
+import java.sql.ResultSet;
+import java.time.YearMonth;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import protocole.ConsoleServeur;
 import protocole.Requete;
@@ -179,11 +180,27 @@ public class RequeteCHAMAP implements Requete, Serializable {
 
                     if(parser.length >= 2) {
                         String identifiant = parser[0];
-                        Vector<String> containers = new Vector<>();
-                        for(int i = 1; i < parser.length; i++)
-                            containers.add(parser[i]);
-                        cs.TraceEvenements(adresseDistante + "#Génération des factures pour " + identifiant + "#" + Thread.currentThread().getName());
-                        rep = new ReponseCHAMAP(ReponseCHAMAP.MAKE_BILL_OK, null);
+                        String containers = parser[1];
+                        try {
+                            db.executeRequeteMiseAJour("INSERT INTO factures (societe, periode) VALUES ('ACME', CAST('" + YearMonth.now() + "-01' AS DATE))");
+                            ResultSet f = db.executeRequeteSelection("SELECT id FROM factures ORDER BY id DESC");
+                            if(f.next()) {
+                                cs.TraceEvenements(adresseDistante + "#Génération des factures pour " + identifiant + "#" + Thread.currentThread().getName());
+                                String facture = f.getString("id");
+                                
+                                BeanBDAccess mdb = new BeanBDAccess("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost:3306/bd_mouvements", "hector", "WA0UH.nice.key");
+                                mdb.creerConnexionBD();
+                                ResultSet rs = mdb.executeRequeteSelection("SELECT * FROM mouvements WHERE dateDepart IS NULL AND container IN (" + containers + ")");
+                                while(rs.next())
+                                    db.executeRequeteMiseAJour("INSERT INTO items_facture VALUES (" + facture + ", " + rs.getString("id") + ", 99.99)");
+                                
+                                rep = new ReponseCHAMAP(ReponseCHAMAP.MAKE_BILL_OK, null);
+                            }
+                            else
+                                rep = new ReponseCHAMAP(ReponseCHAMAP.SERVER_FAIL, null);
+                        } catch (Exception ex) {
+                            rep = new ReponseCHAMAP(ReponseCHAMAP.SERVER_FAIL, null);
+                        }
                     }
                     else
                         rep = new ReponseCHAMAP(ReponseCHAMAP.INVALID_FORMAT, null);

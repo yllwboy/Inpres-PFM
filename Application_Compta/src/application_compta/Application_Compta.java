@@ -29,6 +29,7 @@ public class Application_Compta extends javax.swing.JFrame {
     private ObjectOutputStream oos;
     private Socket cliSock = null;
     private SecretKey cle = null;
+    private SecretKey cle_hmac = null;
     
     /**
      * Creates new form Application_Compta
@@ -74,6 +75,7 @@ public class Application_Compta extends javax.swing.JFrame {
         TFFin = new javax.swing.JTextField();
         jLabel8 = new javax.swing.JLabel();
         TFSociete = new javax.swing.JTextField();
+        BGenererCles = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -156,23 +158,23 @@ public class Application_Compta extends javax.swing.JFrame {
 
         TFactures.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null, null, null},
-                {null, null, null, null, null, null, null, null, null, null}
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null},
+                {null, null, null, null, null, null, null}
             },
             new String [] {
-                "Identifiant", "Société", "Période", "Total hors TVA", "Total", "Validée", "Comptable validateur", "Envoyée", "Moyen d'envoi", "Payée"
+                "Identifiant", "Société", "Période", "Validée", "Comptable validateur", "Envoyée", "Payée"
             }
         ) {
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false, false, false
+                false, false, false, false, false, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -202,6 +204,15 @@ public class Application_Compta extends javax.swing.JFrame {
         TFFin.setText("2021-09");
 
         jLabel8.setText("Société :");
+
+        TFSociete.setText("ACME");
+
+        BGenererCles.setText("Générer clés");
+        BGenererCles.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BGenererClesActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -235,7 +246,8 @@ public class Application_Compta extends javax.swing.JFrame {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(BSendBills, javax.swing.GroupLayout.PREFERRED_SIZE, 243, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addGroup(layout.createSequentialGroup()
-                                .addGap(0, 0, Short.MAX_VALUE)
+                                .addComponent(BGenererCles)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addComponent(BConnexion, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(BDeconnexion))
@@ -286,7 +298,9 @@ public class Application_Compta extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(BDeconnexion)
-                    .addComponent(BConnexion))
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(BConnexion)
+                        .addComponent(BGenererCles)))
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(BSendBills)
@@ -321,28 +335,18 @@ public class Application_Compta extends javax.swing.JFrame {
         if(cliSock != null)
             return;
         
-        String adresse = TFAdresse.getText();
-        int port = Integer.parseInt(TFPort.getText());
-        
         try {
+            String adresse = TFAdresse.getText();
+            int port = Integer.parseInt(TFPort.getText());
+            
             cliSock = new Socket(adresse, port);
             System.out.println(cliSock.getInetAddress().toString());
-        }
-        catch (UnknownHostException e) {
-            TAReponse.setText("Erreur ! Host non trouvé [" + e + "]");
-            return;
-        }
-        catch (IOException e) {
-            TAReponse.setText("Erreur ! Pas de connexion ? [" + e + "]");
-            return;
-        }
-        
-        String chargeUtile;
-        String temps = Long.toString((new Date()).getTime());
-        String alea = Double.toString(Math.random());
-        byte[] msgD;
+            
+            String chargeUtile;
+            String temps = Long.toString((new Date()).getTime());
+            String alea = Double.toString(Math.random());
+            byte[] msgD;
 
-        try {
             String user = TFUser.getText(), password = TFPass.getText();
 
             System.out.println("Instanciation du message digest");
@@ -355,27 +359,11 @@ public class Application_Compta extends javax.swing.JFrame {
 
             msgD = md.digest();
             chargeUtile = user + "  " + temps + "  " + alea;
-
-        } catch (NoSuchAlgorithmException | NoSuchProviderException  ex) {
-            TAReponse.setText("Erreur ! [" + ex.getMessage() + "]");
-            return;
-        }
-        
-        RequeteBISAMAP req = new RequeteBISAMAP(RequeteBISAMAP.LOGIN, chargeUtile, msgD);
-        
-        // Envoi de la requête
-        try {
+            
             oos = new ObjectOutputStream(cliSock.getOutputStream());
-            oos.writeObject(req);
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.LOGIN, chargeUtile, msgD));
             oos.flush();
-        }
-        catch (IOException e) {
-            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
-            return;
-        }
-        
-        // Lecture de la réponse
-        try {
+            
             ois = new ObjectInputStream(cliSock.getInputStream());
             ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
             
@@ -392,22 +380,40 @@ public class Application_Compta extends javax.swing.JFrame {
                     int b = (int) (Math.random() * 100);
                     BigInteger pubkey_b = n.pow(b).remainder(p);
 
-                    req = new RequeteBISAMAP(RequeteBISAMAP.LOGIN, pubkey_b.toString());
-                    oos.writeObject(req);
-                    oos.flush();
+                    String key_b = String.format("%8s", pubkey_a.pow(b).remainder(p).toString()).replace(" ", "0");
+                    System.out.println(" *** Clé obtenue = " + key_b);
+                    cle = new SecretKeySpec(key_b.getBytes(), "DES");
                     
-                    BigInteger key_b = pubkey_a.pow(b).remainder(p);
-                    System.out.println(" *** Clé obtenue = " + key_b.toString());
-                    cle = new SecretKeySpec(key_b.toString().getBytes(), "DES");
+                    int h = (int) (Math.random() * 100000000);
+                    cle_hmac = new SecretKeySpec(String.format("%08d", h).getBytes(), "DES");
+                    System.out.println(" *** Clé générée = " + String.format("%08d", h));
+                    
+                    Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", codeProvider);
+                    chiffrement.init(Cipher.ENCRYPT_MODE, cle);
+
+                    byte[] texteClair = String.format("%08d", h).getBytes();
+                    byte[] texteCrypte = chiffrement.doFinal(texteClair);
+                    System.out.println(" *** Texte crypté = " + new String(texteCrypte));
+                    
+                    System.out.println("Recuperation de la cle publique");
+                    ObjectInputStream cleFichP = new ObjectInputStream(new FileInputStream("xp.ser"));
+                    PublicKey cle_publique = (PublicKey) cleFichP.readObject();
+                    cleFichP.close();
+                    System.out.println("*** Cle publique recuperee = " + cle_publique.toString());
+                    
+                    byte[] signature = chiffrement.doFinal(cle_publique.getEncoded());
+                    
+                    oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.LOGIN, pubkey_b.toString(), texteCrypte, signature));
+                    oos.flush();
                     
                     rep = (ReponseBISAMAP)ois.readObject();
                     
-                    Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", RequeteBISAMAP.codeProvider);
+                    chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", RequeteBISAMAP.codeProvider);
                     chiffrement.init(Cipher.DECRYPT_MODE, cle);
                     
-                    byte[] texteCrypte = rep.getDonneesCryptees();
+                    texteCrypte = rep.getDonneesCryptees();
                     System.out.println(" *** Texte crypté = " + new String(texteCrypte));
-                    byte[] texteClair = chiffrement.doFinal(texteCrypte);
+                    texteClair = chiffrement.doFinal(texteCrypte);
                     System.out.println(" *** Texte clair = " + new String(texteClair));
                 }
             }
@@ -440,7 +446,14 @@ public class Application_Compta extends javax.swing.JFrame {
     }//GEN-LAST:event_BConnexionActionPerformed
 
     private void BDeconnexionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BDeconnexionActionPerformed
-        // TODO add your handling code here:
+        if(cliSock != null) {
+            try {
+                cliSock.close();
+                cliSock = null;
+            } catch (IOException ex) {
+                TAReponse.setText("--- erreur IO = " + ex.getMessage());
+            }
+        }
     }//GEN-LAST:event_BDeconnexionActionPerformed
 
     private void BGetNextBillActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BGetNextBillActionPerformed
@@ -451,14 +464,7 @@ public class Application_Compta extends javax.swing.JFrame {
         try {
             oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.GET_NEXT_BILL, null));
             oos.flush();
-        }
-        catch (IOException e) {
-            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
-            return;
-        }
-        
-        // Lecture de la réponse
-        try {
+            
             ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
             
             if(rep.getCode() == ReponseBISAMAP.GET_NEXT_BILL_OK) {
@@ -474,12 +480,12 @@ public class Application_Compta extends javax.swing.JFrame {
 
                 String[] parser = new String(texteClair).split("  ");
                 
-                if(parser.length >= 10) {
-                    DefaultTableModel model = (DefaultTableModel)TFactures.getModel();
-                    model.setRowCount(0);
-                    model.addRow(parser);
-                }
+                DefaultTableModel model = (DefaultTableModel)TFactures.getModel();
+                model.setRowCount(0);
+                model.addRow(parser);
             }
+            else if(rep.getCode() == ReponseBISAMAP.NO_BILL)
+                TAReponse.setText(" *** Reponse reçue : Aucune facture à valider");
             else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
                 TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
             else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
@@ -507,20 +513,36 @@ public class Application_Compta extends javax.swing.JFrame {
         
         // Envoi de la requête
         try {
-            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.VALIDATE_BILL, "V  " + TFactures.getValueAt(TFactures.getSelectedRow(), 0)));
+            System.out.println("Recuperation de la cle privee");
+            ObjectInputStream cléFichS = new ObjectInputStream(new FileInputStream("xs.ser"));
+            PrivateKey cle_privee = (PrivateKey) cléFichS.readObject();
+            cléFichS.close();
+            System.out.println(" *** Cle privee recuperee = " + cle_privee.toString());
+
+            String cu = "V  " + TFactures.getValueAt(TFactures.getSelectedRow(), 0);
+            
+            System.out.println("Instanciation de la signature");
+            Signature s = Signature. getInstance("SHA1withRSA", codeProvider);
+            System.out.println("Initialisation de la signature");
+            s.initSign(cle_privee);
+            System.out.println("Hachage du message");
+            s.update(cu.getBytes());
+            System.out.println("Generation des bytes");
+            byte[] signature = s.sign();
+            System.out.println("Termine : signature construite");
+            System.out.println("Signature = " + new String(signature));
+            System.out.println("Longueur de la signature = " + signature.length);
+            System.out.println("Envoi du message et de la signature");
+            
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.VALIDATE_BILL, cu, null, signature));
             oos.flush();
-        }
-        catch (IOException e) {
-            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
-            return;
-        }
-        
-        // Lecture de la réponse
-        try {
+            
             ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
             
             if(rep.getCode() == ReponseBISAMAP.VALIDATE_BILL_OK)
                 TAReponse.setText(" *** Reponse reçue : Facture validée");
+            else if(rep.getCode() == ReponseBISAMAP.BAD_SIGNATURE)
+                TAReponse.setText(" *** Reponse reçue : La signature n'est pas correcte");
             else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
                 TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
             else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
@@ -537,6 +559,9 @@ public class Application_Compta extends javax.swing.JFrame {
         }
         catch (IOException e) {
             TAReponse.setText("--- erreur IO = " + e.getMessage());
+        }
+        catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidKeyException | SignatureException e) {
+            TAReponse.setText("--- erreur signature = " + e.getMessage());
         }
     }//GEN-LAST:event_BValidateBillActionPerformed
 
@@ -546,20 +571,36 @@ public class Application_Compta extends javax.swing.JFrame {
         
         // Envoi de la requête
         try {
-            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.VALIDATE_BILL, "I  " + TFactures.getValueAt(TFactures.getSelectedRow(), 0)));
+            System.out.println("Recuperation de la cle privee");
+            ObjectInputStream cléFichS = new ObjectInputStream(new FileInputStream("xs.ser"));
+            PrivateKey cle_privee = (PrivateKey) cléFichS.readObject();
+            cléFichS.close();
+            System.out.println(" *** Cle privee recuperee = " + cle_privee.toString());
+
+            String cu = "I  " + TFactures.getValueAt(TFactures.getSelectedRow(), 0);
+            
+            System.out.println("Instanciation de la signature");
+            Signature s = Signature. getInstance("SHA1withRSA", codeProvider);
+            System.out.println("Initialisation de la signature");
+            s.initSign(cle_privee);
+            System.out.println("Hachage du message");
+            s.update(cu.getBytes());
+            System.out.println("Generation des bytes");
+            byte[] signature = s.sign();
+            System.out.println("Termine : signature construite");
+            System.out.println("Signature = " + new String(signature));
+            System.out.println("Longueur de la signature = " + signature.length);
+            System.out.println("Envoi du message et de la signature");
+            
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.VALIDATE_BILL, cu, null, signature));
             oos.flush();
-        }
-        catch (IOException e) {
-            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
-            return;
-        }
-        
-        // Lecture de la réponse
-        try {
+            
             ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
             
             if(rep.getCode() == ReponseBISAMAP.VALIDATE_BILL_OK)
-                TAReponse.setText(" *** Reponse reçue : Facture validée");
+                TAReponse.setText(" *** Reponse reçue : Facture invalidée");
+            else if(rep.getCode() == ReponseBISAMAP.BAD_SIGNATURE)
+                TAReponse.setText(" *** Reponse reçue : La signature n'est pas correcte");
             else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
                 TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
             else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
@@ -576,6 +617,9 @@ public class Application_Compta extends javax.swing.JFrame {
         }
         catch (IOException e) {
             TAReponse.setText("--- erreur IO = " + e.getMessage());
+        }
+        catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidKeyException | SignatureException e) {
+            TAReponse.setText("--- erreur signature = " + e.getMessage());
         }
     }//GEN-LAST:event_BInvalidateBillActionPerformed
 
@@ -585,20 +629,36 @@ public class Application_Compta extends javax.swing.JFrame {
         
         // Envoi de la requête
         try {
-            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.SEND_BILLS, ""));
+            System.out.println("Recuperation de la cle privee");
+            ObjectInputStream cléFichS = new ObjectInputStream(new FileInputStream("xs.ser"));
+            PrivateKey cle_privee = (PrivateKey) cléFichS.readObject();
+            cléFichS.close();
+            System.out.println(" *** Cle privee recuperee = " + cle_privee.toString());
+            
+            String cu = "";
+            
+            System.out.println("Instanciation de la signature");
+            Signature s = Signature. getInstance("SHA1withRSA", codeProvider);
+            System.out.println("Initialisation de la signature");
+            s.initSign(cle_privee);
+            System.out.println("Hachage du message");
+            s.update(cu.getBytes());
+            System.out.println("Generation des bytes");
+            byte[] signature = s.sign();
+            System.out.println("Termine : signature construite");
+            System.out.println("Signature = " + new String(signature));
+            System.out.println("Longueur de la signature = " + signature.length);
+            System.out.println("Envoi du message et de la signature");
+            
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.SEND_BILLS, cu, null, signature));
             oos.flush();
-        }
-        catch (IOException e) {
-            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
-            return;
-        }
-        
-        // Lecture de la réponse
-        try {
+            
             ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
             
             if(rep.getCode() == ReponseBISAMAP.SEND_BILLS_OK)
                 TAReponse.setText(" *** Reponse reçue : Factures envoyées");
+            else if(rep.getCode() == ReponseBISAMAP.BAD_SIGNATURE)
+                TAReponse.setText(" *** Reponse reçue : La signature n'est pas correcte");
             else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
                 TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
             else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
@@ -616,6 +676,9 @@ public class Application_Compta extends javax.swing.JFrame {
         catch (IOException e) {
             TAReponse.setText("--- erreur IO = " + e.getMessage());
         }
+        catch (NoSuchAlgorithmException | NoSuchProviderException | InvalidKeyException | SignatureException e) {
+            TAReponse.setText("--- erreur signature = " + e.getMessage());
+        }
     }//GEN-LAST:event_BSendBillsActionPerformed
 
     private void BListBillsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BListBillsActionPerformed
@@ -624,16 +687,30 @@ public class Application_Compta extends javax.swing.JFrame {
         
         // Envoi de la requête
         try {
-            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.LIST_BILLS, TFSociete.getText() + "  " + TFDebut.getText() + "  " + TFFin.getText()));
+            System.out.println("Recuperation de la cle privee");
+            ObjectInputStream cléFichS = new ObjectInputStream(new FileInputStream("xs.ser"));
+            PrivateKey cle_privee = (PrivateKey) cléFichS.readObject();
+            cléFichS.close();
+            System.out.println(" *** Cle privee recuperee = " + cle_privee.toString());
+            
+            String cu = TFSociete.getText() + "  " + TFDebut.getText() + "  " + TFFin.getText();
+            
+            System.out.println("Instanciation de la signature");
+            Signature s = Signature. getInstance("SHA1withRSA", codeProvider);
+            System.out.println("Initialisation de la signature");
+            s.initSign(cle_privee);
+            System.out.println("Hachage du message");
+            s.update(cu.getBytes());
+            System.out.println("Generation des bytes");
+            byte[] signature = s.sign();
+            System.out.println("Termine : signature construite");
+            System.out.println("Signature = " + new String(signature));
+            System.out.println("Longueur de la signature = " + signature.length);
+            System.out.println("Envoi du message et de la signature");
+            
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.LIST_BILLS, cu, null, signature));
             oos.flush();
-        }
-        catch (IOException e) {
-            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
-            return;
-        }
-        
-        // Lecture de la réponse
-        try {
+            
             ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
             
             if(rep.getCode() == ReponseBISAMAP.LIST_BILLS_OK) {
@@ -659,6 +736,8 @@ public class Application_Compta extends javax.swing.JFrame {
                 else
                     model.addRow(chu.split("  "));
             }
+            else if(rep.getCode() == ReponseBISAMAP.BAD_SIGNATURE)
+                TAReponse.setText(" *** Reponse reçue : La signature n'est pas correcte");
             else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
                 TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
             else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
@@ -677,6 +756,8 @@ public class Application_Compta extends javax.swing.JFrame {
             TAReponse.setText("--- erreur IO = " + e.getMessage());
         } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
             TAReponse.setText("--- erreur cryptage = " + e.getMessage());
+        } catch (SignatureException e) {
+            TAReponse.setText("--- erreur signature = " + e.getMessage());
         }
     }//GEN-LAST:event_BListBillsActionPerformed
 
@@ -684,7 +765,6 @@ public class Application_Compta extends javax.swing.JFrame {
         if(cliSock == null)
             return;
         
-        RequeteBISAMAP req;
         try {
             Cipher chiffrement = Cipher.getInstance("DES/ECB/PKCS5Padding", codeProvider);
             chiffrement.init(Cipher.ENCRYPT_MODE, cle);
@@ -692,30 +772,27 @@ public class Application_Compta extends javax.swing.JFrame {
             byte[] texteClair = id.getBytes();
             byte[] texteCrypte = chiffrement.doFinal(texteClair);
             System.out.println(" *** Texte crypté = " + new String(texteCrypte));
-
-            req = new RequeteBISAMAP(RequeteBISAMAP.REC_PAY, null, texteCrypte);
-        } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException ex) {
-            TAReponse.setText("--- erreur cryptage = " + ex.getMessage());
-            return;
-        }
-        
-        
-        // Envoi de la requête
-        try {
-            oos.writeObject(req);
+            
+            System.out.println("Instanciation du HMAC");
+            Mac hmac = Mac.getInstance("HMAC-MD5", codeProvider);
+            hmac.init(cle_hmac);
+            System.out.println("Hachage du message");
+            hmac.update(texteCrypte);
+            System.out.println("Generation des bytes");
+            byte[] hb = hmac.doFinal();
+            System.out.println("Termine : HMAC construit");
+            System.out.println("HMAC = " + new String(hb));
+            System.out.println("Longueur du HMAC = " + hb.length);
+            
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.REC_PAY, null, texteCrypte, hb));
             oos.flush();
-        }
-        catch (IOException e) {
-            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
-            return;
-        }
-        
-        // Lecture de la réponse
-        try {
+            
             ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
             
             if(rep.getCode() == ReponseBISAMAP.REC_PAY_OK)
                 TAReponse.setText(" *** Reponse reçue : Facture payée");
+            else if(rep.getCode() == ReponseBISAMAP.BAD_SIGNATURE)
+                TAReponse.setText(" *** Reponse reçue : La signature n'est pas correcte");
             else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
                 TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
             else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
@@ -733,6 +810,9 @@ public class Application_Compta extends javax.swing.JFrame {
         catch (IOException e) {
             TAReponse.setText("--- erreur IO = " + e.getMessage());
         }
+        catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+            TAReponse.setText("--- erreur cryptage = " + e.getMessage());
+        }
     }//GEN-LAST:event_BRecPayActionPerformed
 
     private void BListWaitingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BListWaitingActionPerformed
@@ -741,16 +821,30 @@ public class Application_Compta extends javax.swing.JFrame {
         
         // Envoi de la requête
         try {
-            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.LIST_WAITING, "T"));
+            System.out.println("Recuperation de la cle privee");
+            ObjectInputStream cléFichS = new ObjectInputStream(new FileInputStream("xs.ser"));
+            PrivateKey cle_privee = (PrivateKey) cléFichS.readObject();
+            cléFichS.close();
+            System.out.println(" *** Cle privee recuperee = " + cle_privee.toString());
+            
+            String cu = "T";
+            
+            System.out.println("Instanciation de la signature");
+            Signature s = Signature. getInstance("SHA1withRSA", codeProvider);
+            System.out.println("Initialisation de la signature");
+            s.initSign(cle_privee);
+            System.out.println("Hachage du message");
+            s.update(cu.getBytes());
+            System.out.println("Generation des bytes");
+            byte[] signature = s.sign();
+            System.out.println("Termine : signature construite");
+            System.out.println("Signature = " + new String(signature));
+            System.out.println("Longueur de la signature = " + signature.length);
+            System.out.println("Envoi du message et de la signature");
+            
+            oos.writeObject(new RequeteBISAMAP(RequeteBISAMAP.LIST_WAITING, "T", null, signature));
             oos.flush();
-        }
-        catch (IOException e) {
-            TAReponse.setText("Erreur réseau ? [" + e.getMessage() + "]");
-            return;
-        }
-        
-        // Lecture de la réponse
-        try {
+            
             ReponseBISAMAP rep = (ReponseBISAMAP)ois.readObject();
             
             if(rep.getCode() == ReponseBISAMAP.LIST_WAITING_OK) {
@@ -776,6 +870,8 @@ public class Application_Compta extends javax.swing.JFrame {
                 else
                     model.addRow(chu.split("  "));
             }
+            else if(rep.getCode() == ReponseBISAMAP.BAD_SIGNATURE)
+                TAReponse.setText(" *** Reponse reçue : La signature n'est pas correcte");
             else if(rep.getCode() == ReponseBISAMAP.NOT_LOGGED_IN)
                 TAReponse.setText(" *** Reponse reçue : Vous n'êtes pas connecté");
             else if(rep.getCode() == ReponseBISAMAP.INVALID_FORMAT)
@@ -794,8 +890,53 @@ public class Application_Compta extends javax.swing.JFrame {
             TAReponse.setText("--- erreur IO = " + e.getMessage());
         } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
             TAReponse.setText("--- erreur cryptage = " + e.getMessage());
+        } catch (SignatureException e) {
+            TAReponse.setText("--- erreur signature = " + e.getMessage());
         }
     }//GEN-LAST:event_BListWaitingActionPerformed
+
+    private void BGenererClesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BGenererClesActionPerformed
+        String codeProvider = "BC"; //CryptixCrypto";
+        SecureRandom prng = new SecureRandom();
+        
+        try {
+            Security.addProvider(new BouncyCastleProvider());
+            
+// Génération des clés
+            System.out.println("Tentative d'obtention d'un generateur de cle");
+            KeyPairGenerator genCles = KeyPairGenerator.getInstance("RSA", codeProvider);
+            
+            System.out.println("Tentative d'initialisation du generateur de cle");
+            int se = 512; // par exemple
+            genCles.initialize(se, prng);
+            
+            System.out.println("Tentative d'obtention de cles");
+            KeyPair deuxCles = genCles.generateKeyPair();
+            PublicKey cléPublique = deuxCles.getPublic();
+            PrivateKey cléPrivee = deuxCles.getPrivate();
+            System.out.println(" *** Cle publique generee = " + cléPublique);
+            System.out.println(" *** Cle privee generee = " + cléPrivee);
+            
+// Sérialisation de clés
+            System.out.println(" *** Cle publique generee serialisee");
+            ObjectOutputStream cléPubliqueFich = new ObjectOutputStream(new FileOutputStream("xp.ser"));
+            System.out.println("fichier ouvert");
+            cléPubliqueFich.writeObject(cléPublique);
+            System.out.println("cle ecrite");
+            cléPubliqueFich.close();
+            
+            System.out.println(" *** Cle privee generee serialisee");
+            ObjectOutputStream cléPrivéeFich = new ObjectOutputStream(new FileOutputStream("xs.ser"));
+            cléPrivéeFich.writeObject(cléPrivee);
+            cléPrivéeFich.close();
+            
+            TAReponse.setText("Clés générées");
+        } catch (IOException ex) {
+            TAReponse.setText("--- erreur IO = " + ex.getMessage());
+        } catch (NoSuchAlgorithmException | NoSuchProviderException ex) {
+            TAReponse.setText("--- erreur cryptage = " + ex.getMessage());
+        }
+    }//GEN-LAST:event_BGenererClesActionPerformed
 
     /**
      * @param args the command line arguments
@@ -835,6 +976,7 @@ public class Application_Compta extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton BConnexion;
     private javax.swing.JButton BDeconnexion;
+    private javax.swing.JButton BGenererCles;
     private javax.swing.JButton BGetNextBill;
     private javax.swing.JButton BInvalidateBill;
     private javax.swing.JButton BListBills;

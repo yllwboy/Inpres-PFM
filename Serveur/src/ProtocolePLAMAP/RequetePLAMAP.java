@@ -295,21 +295,17 @@ public class RequetePLAMAP implements Requete, Serializable {
 
                     if(parser.length >= 3) {
                         String identifiant = parser[0];
-                        String dateDepart = parser[1];
                         Vector<String> containers = new Vector<>();
                         for(int i = 1; i < parser.length; i++)
                             containers.add(parser[i]);
                         cs.TraceEvenements(adresseDistante + "#Signal de départ pour " + identifiant + "#" + Thread.currentThread().getName());
                         
-                        String cont_list = "delete";
-                        for(String container : containers)
-                            cont_list += ", " + container;
-                        cont_list = cont_list.split("delete, ")[1];
+                        String cont_list = containers.get(0);
+                        for(int i = 1; i < containers.size(); i++)
+                            cont_list += ", " + containers.get(i);
                         
                         try {
-                            db.executeRequeteMiseAJour("UPDATE occupations SET dateFin = CAST('" + dateDepart + "' AS DATE) WHERE id IN (" + cont_list + ")");
-                            
-                            cli_req = new RequeteCHAMAP(RequeteCHAMAP.MAKE_BILL, identifiant + ":" + cont_list);
+                            cli_req = new RequeteCHAMAP(RequeteCHAMAP.MAKE_BILL, identifiant + "  " + cont_list);
                             
                             cli_oos.writeObject(cli_req);
                             cli_oos.flush();
@@ -317,8 +313,11 @@ public class RequetePLAMAP implements Requete, Serializable {
                             cli_rep = (ReponseCHAMAP)cli_ois.readObject();
                             System.out.println("Requete lue par le serveur, instance de " + req.getClass().getName());
                             
-                            if(cli_rep.getCode() == ReponseCHAMAP.MAKE_BILL_OK)
+                            if(cli_rep.getCode() == ReponseCHAMAP.MAKE_BILL_OK) {
+                                db.executeRequeteMiseAJour("UPDATE occupations SET dateFin = CAST('" + java.time.LocalDate.now() + "' AS DATE) WHERE id IN (" + cont_list + ")");
+                                db.executeRequeteMiseAJour("UPDATE mouvements SET transSortant = '" + identifiant + "', dateDepart = CAST('" + java.time.LocalDate.now() + "' AS DATE) WHERE dateDepart IS NULL AND container IN (" + cont_list + ")");
                                 rep = "SIGNAL_DEP_OK";
+                            }
                             else
                                 rep = "BILLING_ERROR";
                         } catch (Exception ex) {
