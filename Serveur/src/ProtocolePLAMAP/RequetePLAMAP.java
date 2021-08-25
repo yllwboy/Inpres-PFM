@@ -17,6 +17,8 @@ import java.io.Serializable;
 import java.net.Socket;
 import java.sql.ResultSet;
 import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import protocole.ConsoleServeur;
 import protocole.Requete;
 
@@ -189,6 +191,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                             if(rs.next()) {
                                 String x = rs.getString("x");
                                 String y = rs.getString("y");
+                                rep = "";
                                 try {
                                     db.executeRequeteMiseAJour("INSERT INTO containers VALUES (" + container + ", '" + societe + "', '" + contenu + "', " + capacite + ", '" + dangers + "')");
                                 } catch (Exception e) {
@@ -196,19 +199,22 @@ public class RequetePLAMAP implements Requete, Serializable {
                                         db.executeRequeteMiseAJour("UPDATE containers SET proprietaire = '" + societe + "', contenu = '" + contenu + "', capacite = " + capacite + ", dangers = '" + dangers + "' WHERE id = " + container);
                                     } catch (Exception ex) {
                                         System.err.println("Erreur ? [" + ex.getMessage() + "]");
-                                        rep = "SQL_ERROR";
+                                        rep = "SERVER_FAIL";
                                     }
                                 }
-                                rs = db.executeRequeteSelection("SELECT * FROM mouvements WHERE dateDepart IS NULL AND container = " + container);
-                                if(rs.next())
-                                    rep = "CONTAINER_ALREADY_PRESENT";
-                                else {
-                                    try {
-                                        db.executeRequeteMiseAJour("INSERT INTO mouvements (container, transEntrant, dateArrivee, poids, destination) VALUES (" + container + ", '" + transEntrant + "', CAST('" + dateArrivee + "' AS DATE), 0, " + destination + ")");
-                                        rep = "GET_XY_OK::" + x + ", " + y;
-                                    } catch (Exception ex) {
-                                        System.err.println("Erreur ? [" + ex.getMessage() + "]");
-                                        rep = "SQL_ERROR";
+                                if(!"SERVER_FAIL".equals(rep)) {
+                                    rs = db.executeRequeteSelection("SELECT * FROM mouvements WHERE dateDepart IS NULL AND container = " + container);
+                                    if(rs.next())
+                                        rep = "CONTAINER_ALREADY_PRESENT";
+                                    else {
+                                        try {
+                                            db.executeRequeteMiseAJour("INSERT INTO mouvements (container, transEntrant, dateArrivee, poids, destination) VALUES (" + container + ", '" + transEntrant + "', CAST('" + dateArrivee + "' AS DATE), 0, " + destination + ")");
+                                            db.executeRequeteMiseAJour("INSERT INTO occupations (container, x, y, dateDebut) VALUES (" + container + ", " + x + ", " + y + ", CAST('" + dateArrivee + "' AS DATE))");
+                                            rep = "GET_XY_OK::" + x + ", " + y;
+                                        } catch (Exception ex) {
+                                            System.err.println("Erreur ? [" + ex.getMessage() + "]");
+                                            rep = "SERVER_FAIL";
+                                        }
                                     }
                                 }
                             }
@@ -234,15 +240,17 @@ public class RequetePLAMAP implements Requete, Serializable {
                 if(loggedIn) {
                     String[] parser = cu.split("  ");
 
-                    if(parser.length >= 3) {
+                    if(parser.length >= 2) {
                         String container = parser[0];
-                        String emplacement = parser[1];
-                        String poids = parser[2];
+                        String poids = parser[1];
                         cs.TraceEvenements(adresseDistante + "#Enregistrement du poids pour " + container + "#" + Thread.currentThread().getName());
                         
-                        
-                        
-                        rep = "SEND_WEIGHT_OK";
+                        try {
+                            db.executeRequeteMiseAJour("UPDATE mouvements SET poids = " + poids + " WHERE dateDepart IS NULL AND container = " + container);
+                            rep = "SEND_WEIGHT_OK";
+                        } catch (Exception ex) {
+                            rep = "SERVER_FAIL";
+                        }
                     }
                     else
                         rep = "INVALID_FORMAT";
@@ -255,31 +263,22 @@ public class RequetePLAMAP implements Requete, Serializable {
                 String adresseDistante = sock.getRemoteSocketAddress().toString();
                 System.out.println("Début de Get_List : adresse distante = " + adresseDistante);
                 // la charge utile est le nom et mot de passe
-                String cu = req.getChargeUtile();
+                String destination = req.getChargeUtile();
 
                 if(loggedIn) {
-                    String[] parser = cu.split("  ");
+                    cs.TraceEvenements(adresseDistante + "#Liste des emplacements occupés pour " + destination + "#" + Thread.currentThread().getName());
 
-                    if(parser.length >= 3) {
-                        String identifiant = parser[0];
-                        String destination = parser[1];
-                        String nbContainers = parser[2];
-                        cs.TraceEvenements(adresseDistante + "#Liste des emplacements occupés pour " + destination + "#" + Thread.currentThread().getName());
-
-                        try {
-                            ResultSet rs = db.executeRequeteSelection("SELECT * FROM occupations WHERE container IN (SELECT container FROM mouvements WHERE destination = '" + destination + "') ORDER BY dateDebut ASC");
-                            String out_cu = "";
-                            while(rs.next()) {
-                                out_cu += rs.getString("x") + "," + rs.getString("y");
-                                out_cu += "  ";
-                            }
-                            rep = "GET_LIST_OK::"+out_cu;
-                        } catch (Exception ex) {
-                            rep = "SERVER_FAIL";
+                    try {
+                        ResultSet rs = db.executeRequeteSelection("SELECT * FROM occupations WHERE container IN (SELECT container FROM mouvements WHERE destination = '" + destination + "') AND dateFin IS NULL ORDER BY dateDebut ASC");
+                        String out_cu = "";
+                        while(rs.next()) {
+                            out_cu += rs.getString("container") + "[" + rs.getString("x") + "," + rs.getString("y") + "]";
+                            out_cu += "  ";
                         }
+                        rep = "GET_LIST_OK::"+out_cu;
+                    } catch (Exception ex) {
+                        rep = "SERVER_FAIL";
                     }
-                    else
-                        rep = "INVALID_FORMAT";
                 }
                 else
                     rep = "NOT_LOGGED_IN";
@@ -315,7 +314,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                             System.out.println("Requete lue par le serveur, instance de " + req.getClass().getName());
                             
                             if(cli_rep.getCode() == ReponseCHAMAP.MAKE_BILL_OK) {
-                                db.executeRequeteMiseAJour("UPDATE occupations SET dateFin = CAST('" + java.time.LocalDate.now() + "' AS DATE) WHERE id IN (" + cont_list + ")");
+                                db.executeRequeteMiseAJour("UPDATE occupations SET dateFin = CAST('" + java.time.LocalDate.now() + "' AS DATE) WHERE dateFin IS NULL AND id IN (" + cont_list + ")");
                                 db.executeRequeteMiseAJour("UPDATE mouvements SET transSortant = '" + identifiant + "', dateDepart = CAST('" + java.time.LocalDate.now() + "' AS DATE) WHERE dateDepart IS NULL AND container IN (" + cont_list + ")");
                                 rep = "SIGNAL_DEP_OK";
                             }
