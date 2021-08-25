@@ -28,6 +28,19 @@ char marqueurRecu (char *m, int nc)
 			return 0;
 }
 
+char singleMarqueurRecu (char *m, int nc)
+/* Recherche de la sequence \r\n */
+{
+	int i;
+	char trouve = 0;
+	
+	for(i = 0; i < nc && !trouve; i++)
+		if (m[i] == '\r')
+			trouve=1;
+	
+	return trouve;
+}
+
 int recvGrosMsg(int socket, char *msg, size_t segSize)
 {
 	int tailleMsgRecu = 0, nbreBytesRecus = 0, finDetectee = 0;
@@ -57,7 +70,7 @@ int recvGrosMsg(int socket, char *msg, size_t segSize)
 		}
 		else
 		{
-			finDetectee = marqueurRecu(buf, nbreBytesRecus);
+			finDetectee = singleMarqueurRecu(buf, nbreBytesRecus);
 			memcpy((char *)msg + tailleMsgRecu, buf, nbreBytesRecus);
 			tailleMsgRecu += nbreBytesRecus;
 			printf("finDetecteee = %d\n", finDetectee);
@@ -67,7 +80,7 @@ int recvGrosMsg(int socket, char *msg, size_t segSize)
 	}
 	while (nbreBytesRecus != 0 && nbreBytesRecus != -1 && !finDetectee);
 	
-	msg[tailleMsgRecu - 2] = 0;
+	msg[tailleMsgRecu - 1] = 0;
 	printf("Recv socket OK\n");
 	printf("Message reçu = %s\n", msg);
 	

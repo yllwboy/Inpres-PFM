@@ -9,7 +9,7 @@
 #define EOC "INPUT-DONE  KO"
 #define DOC "DENY_OF_CONNEXION"
 #define SEPARATEUR "  "
-#define TERMINATEUR "\r\n"
+#define TERMINATEUR "\r"
 
 int hSocket;
 struct hostent *infosHost;
@@ -73,11 +73,35 @@ int main()
 			case 2:
 				sprintf(msgClient, "INPUT-TRUCK");
 				strcat(msgClient, SEPARATEUR);
-				printf("\nNuméro d'immatriculation du camion: ");
+				printf("\nNom de la société: ");
+				scanf("%s", buf);
+				strcat(msgClient, buf);
+				strcat(msgClient, SEPARATEUR);
+				printf("Numéro d'immatriculation du camion: ");
 				scanf("%s", buf);
 				strcat(msgClient, buf);
 				strcat(msgClient, SEPARATEUR);
 				printf("Identifiant du container: ");
+				scanf("%s", buf);
+				strcat(msgClient, buf);
+				strcat(msgClient, SEPARATEUR);
+				printf("Destination: ");
+				scanf("%s", buf);
+				strcat(msgClient, buf);
+				strcat(msgClient, SEPARATEUR);
+				printf("Date d'arrivée: ");
+				scanf("%s", buf);
+				strcat(msgClient, buf);
+				strcat(msgClient, SEPARATEUR);
+				printf("Contenu du container: ");
+				scanf("%s", buf);
+				strcat(msgClient, buf);
+				strcat(msgClient, SEPARATEUR);
+				printf("Capacité du container: ");
+				scanf("%s", buf);
+				strcat(msgClient, buf);
+				strcat(msgClient, SEPARATEUR);
+				printf("Dangers: ");
 				scanf("%s", buf);
 				strcat(msgClient, buf);
 				break;

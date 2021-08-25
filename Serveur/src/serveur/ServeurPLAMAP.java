@@ -164,7 +164,7 @@ public class ServeurPLAMAP extends ThreadServeur {
                 BufferedReader inFromServer = new BufferedReader(new InputStreamReader(CSocket.getInputStream()));
                 String chu = inFromServer.readLine();
                 System.out.println(chu);
-                RequetePLAMAP req = new RequetePLAMAP(chu.split("\r\n")[0]);
+                RequetePLAMAP req = new RequetePLAMAP(chu.split("\r")[0]);
                 req.setIn(inFromServer);
                 req.setCli_ois(ois);
                 req.setCli_oos(oos);

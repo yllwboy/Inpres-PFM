@@ -183,7 +183,7 @@ void *fctThread(void *param)
 	char msgMouv[LONG_MSG_SERV];
 	int vr = (int)(param), iCliTraite, retRecv, etat = 0, hSocketServ;
 	char idTransport[MAXSTRING], idContainer[MAXSTRING], username[MAXSTRING], password[MAXSTRING];
-	char *commande, *destination, *capMax, *nbContainers;
+	char *commande, *destination, *societe, *date_arrivee, *contenu, *capacite, *dangers;
 	
 	while(1)
 	{
@@ -313,10 +313,16 @@ void *fctThread(void *param)
 				{
 					if(etat == 1)
 					{
+						char *societe = strtok(NULL, SEPARATEUR);
 						char *idT = strtok(NULL, SEPARATEUR);
 						char *idC = strtok(NULL, SEPARATEUR);
+						char *destination = strtok(NULL, SEPARATEUR);
+						char *date_arrivee = strtok(NULL, SEPARATEUR);
+						char *contenu = strtok(NULL, SEPARATEUR);
+						char *capacite = strtok(NULL, SEPARATEUR);
+						char *dangers = strtok(NULL, SEPARATEUR);
 						
-						if(idT != NULL && idC != NULL)
+						if(societe != NULL && idT != NULL && idC != NULL && destination != NULL && date_arrivee != NULL && contenu != NULL && capacite != NULL && dangers != NULL)
 						{
 							strncpy(idTransport, idT, (MAXSTRING - 1) * sizeof(char));
 							idTransport[MAXSTRING - 1] = 0;
@@ -326,9 +332,21 @@ void *fctThread(void *param)
 							pthread_mutex_lock(&mutexFichParc);
 							
 							sprintf(msgMouv, "GET_XY::");
+							strcat(msgMouv, societe);
+							strcat(msgMouv, SEPARATEUR);
 							strcat(msgMouv, idTransport);
 							strcat(msgMouv, SEPARATEUR);
 							strcat(msgMouv, idContainer);
+							strcat(msgMouv, SEPARATEUR);
+							strcat(msgMouv, destination);
+							strcat(msgMouv, SEPARATEUR);
+							strcat(msgMouv, date_arrivee);
+							strcat(msgMouv, SEPARATEUR);
+							strcat(msgMouv, contenu);
+							strcat(msgMouv, SEPARATEUR);
+							strcat(msgMouv, capacite);
+							strcat(msgMouv, SEPARATEUR);
+							strcat(msgMouv, dangers);
 							strcat(msgMouv, TERMINATEUR);
 							
 							if(send(hSocketMouv, msgMouv, strlen(msgMouv), 0) == -1)

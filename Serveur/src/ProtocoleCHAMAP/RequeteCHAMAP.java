@@ -182,19 +182,34 @@ public class RequeteCHAMAP implements Requete, Serializable {
                         String identifiant = parser[0];
                         String containers = parser[1];
                         try {
-                            db.executeRequeteMiseAJour("INSERT INTO factures (societe, periode) VALUES ('ACME', CAST('" + YearMonth.now() + "-01' AS DATE))");
-                            ResultSet f = db.executeRequeteSelection("SELECT id FROM factures ORDER BY id DESC");
-                            if(f.next()) {
-                                cs.TraceEvenements(adresseDistante + "#Génération des factures pour " + identifiant + "#" + Thread.currentThread().getName());
-                                String facture = f.getString("id");
-                                
-                                BeanBDAccess mdb = new BeanBDAccess("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost:3306/bd_mouvements", "hector", "WA0UH.nice.key");
-                                mdb.creerConnexionBD();
-                                ResultSet rs = mdb.executeRequeteSelection("SELECT * FROM mouvements WHERE dateDepart IS NULL AND container IN (" + containers + ")");
-                                while(rs.next())
-                                    db.executeRequeteMiseAJour("INSERT INTO items_facture VALUES (" + facture + ", " + rs.getString("id") + ", 99.99)");
-                                
-                                rep = new ReponseCHAMAP(ReponseCHAMAP.MAKE_BILL_OK, null);
+                            BeanBDAccess mdb = new BeanBDAccess("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost:3306/bd_mouvements", "hector", "WA0UH.nice.key");
+                            mdb.creerConnexionBD();
+                            ResultSet rs = mdb.executeRequeteSelection("SELECT * FROM transporteurs WHERE id = '" + identifiant + "'");
+                            
+                            if(rs.next()) {
+                                String societe = rs.getString("proprietaire");
+                                ResultSet f = db.executeRequeteSelection("SELECT * FROM factures WHERE validee = 0 AND societe = '" + societe + "' AND periode = CAST('" + YearMonth.now() + "-01' AS DATE)");
+                                String facture = null;
+                                if(f.next()) {
+                                    facture = f.getString("id");
+                                }
+                                else {
+                                    db.executeRequeteMiseAJour("INSERT INTO factures (societe, periode) VALUES ('" + societe + "', CAST('" + YearMonth.now() + "-01' AS DATE))");
+                                    f = db.executeRequeteSelection("SELECT id FROM factures ORDER BY id DESC");
+                                    if(f.next())
+                                        facture = f.getString("id");
+                                    
+                                }
+                                if(facture != null) {
+                                    cs.TraceEvenements(adresseDistante + "#Génération des factures pour " + identifiant + "#" + Thread.currentThread().getName());
+                                    rs = mdb.executeRequeteSelection("SELECT * FROM mouvements WHERE dateDepart IS NULL AND container IN (" + containers + ")");
+                                    while(rs.next())
+                                        db.executeRequeteMiseAJour("INSERT INTO items_facture VALUES (" + facture + ", " + rs.getString("id") + ", 99.99)");
+
+                                    rep = new ReponseCHAMAP(ReponseCHAMAP.MAKE_BILL_OK, null);
+                                }
+                                else
+                                    rep = new ReponseCHAMAP(ReponseCHAMAP.SERVER_FAIL, null);
                             }
                             else
                                 rep = new ReponseCHAMAP(ReponseCHAMAP.SERVER_FAIL, null);

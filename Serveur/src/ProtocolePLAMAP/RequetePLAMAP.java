@@ -175,7 +175,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                 if(loggedIn) {
                     String[] parser = cu.split("  ");
 
-                    if(parser.length >= 5) {
+                    if(parser.length >= 8) {
                         String societe = parser[0];
                         String transEntrant = parser[1];
                         String container = parser[2];
@@ -187,7 +187,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                         cs.TraceEvenements(adresseDistante + "#Obtenir emplacement pour " + container + "#" + Thread.currentThread().getName());
                         
                         try {
-                            ResultSet rs = db.executeRequeteSelection("SELECT * FROM parc MINUS SELECT x, y FROM occupations WHERE dateDebut > CAST('" + dateArrivee + "' AS DATE) OR dateFin > CAST('" + dateArrivee + "' AS DATE)");
+                            ResultSet rs = db.executeRequeteSelection("SELECT * FROM bd_mouvements.parc WHERE (x,y) NOT IN (SELECT x,y FROM bd_mouvements.occupations WHERE dateFin IS NULL OR dateFin > CAST('" + dateArrivee + "' AS DATE))");
                             if(rs.next()) {
                                 String x = rs.getString("x");
                                 String y = rs.getString("y");
@@ -221,6 +221,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                             else
                                 rep = "NO_SPACE_LEFT";
                         } catch (Exception ex) {
+                            System.err.println("Erreur ? [" + ex.getMessage() + "]");
                             rep = "SERVER_FAIL";
                         }
                     }
@@ -293,7 +294,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                 if(loggedIn) {
                     String[] parser = cu.split("  ");
 
-                    if(parser.length >= 3) {
+                    if(parser.length >= 2) {
                         String identifiant = parser[0];
                         Vector<String> containers = new Vector<>();
                         for(int i = 1; i < parser.length; i++)
@@ -314,7 +315,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                             System.out.println("Requete lue par le serveur, instance de " + req.getClass().getName());
                             
                             if(cli_rep.getCode() == ReponseCHAMAP.MAKE_BILL_OK) {
-                                db.executeRequeteMiseAJour("UPDATE occupations SET dateFin = CAST('" + java.time.LocalDate.now() + "' AS DATE) WHERE dateFin IS NULL AND id IN (" + cont_list + ")");
+                                db.executeRequeteMiseAJour("UPDATE occupations SET dateFin = CAST('" + java.time.LocalDate.now() + "' AS DATE) WHERE dateFin IS NULL AND container IN (" + cont_list + ")");
                                 db.executeRequeteMiseAJour("UPDATE mouvements SET transSortant = '" + identifiant + "', dateDepart = CAST('" + java.time.LocalDate.now() + "' AS DATE) WHERE dateDepart IS NULL AND container IN (" + cont_list + ")");
                                 rep = "SIGNAL_DEP_OK";
                             }
@@ -335,7 +336,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                 rep = "UNKNOWN_TYPE";
             
             try {
-                rep += "\r\n";
+                rep += "\r";
                 out.writeBytes(rep);
                 out.flush();
                 

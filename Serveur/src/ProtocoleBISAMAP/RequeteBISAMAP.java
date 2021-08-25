@@ -20,8 +20,6 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.spec.X509EncodedKeySpec;
 import java.sql.ResultSet;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -188,7 +186,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                                     BigInteger n = new BigInteger("" + (int)(Math.random() * 100000000));
                                     BigInteger p = new BigInteger("0");
 
-                                    while (n.compareTo(p) > 0)
+                                    while (n.compareTo(p) >= 0)
                                         p = new BigInteger("" + (int)(Math.random() * 100000000));
 
                                     int a = (int) (Math.random() * 100);
@@ -317,6 +315,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                                 }
                                 else {
                                     cs.TraceEvenements(adresseDistante + "#Invalidation de " + facture + "#" + Thread.currentThread().getName());
+                                    db.executeRequeteMiseAJour("DELETE FROM items_facture WHERE facture = " + facture);
                                     db.executeRequeteMiseAJour("DELETE FROM factures WHERE id = " + facture);
                                     rep = new ReponseBISAMAP(ReponseBISAMAP.VALIDATE_BILL_OK, null);
                                 }
