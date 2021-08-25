@@ -421,13 +421,13 @@ public class RequeteBISAMAP implements Requete, Serializable {
 
                         if(s.verify(req.getSignature())) {
                             cs.TraceEvenements(adresseDistante + "#Envoi de factures#" + Thread.currentThread().getName());
-                            if(cu != null) {
+                            if(!"".equals(cu)) {
                                 String[] parser = cu.split("  ");
                                 String factures = parser[0];
                                 for(int i = 1; i < parser.length; i++)
                                     factures += ", " + parser[i];
 
-                                db.executeRequeteMiseAJour("UPDATE factures SET envoyee = 1 WHERE validee = 1 AND comptable = " + session + " AND id NOT IN ( " + factures + ")");
+                                db.executeRequeteMiseAJour("UPDATE factures SET envoyee = 1 WHERE validee = 1 AND comptable = " + session + " AND id NOT IN (" + factures + ")");
                                 rep = new ReponseBISAMAP(ReponseBISAMAP.SEND_BILLS_OK, null);
                             }
                             else {
@@ -440,6 +440,7 @@ public class RequeteBISAMAP implements Requete, Serializable {
                     } catch (InvalidKeyException | SignatureException | NoSuchAlgorithmException | NoSuchProviderException ex) {
                         rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
                     } catch (Exception ex) {
+                        System.err.println(ex.getMessage());
                         rep = new ReponseBISAMAP(ReponseBISAMAP.SERVER_FAIL, null);
                     }
                 }

@@ -100,10 +100,6 @@ int main()
 				printf("Destination: ");
 				scanf("%s", buf);
 				strcat(msgClient, buf);
-				strcat(msgClient, SEPARATEUR);
-				printf("Capacité maximale: ");
-				scanf("%s", buf);
-				strcat(msgClient, buf);
 				break;
 			case 5:
 				sprintf(msgClient, "OUTPUT-ONE");
@@ -115,13 +111,6 @@ int main()
 			case 6:
 				sprintf(msgClient, "OUTPUT-DONE");
 				strcat(msgClient, SEPARATEUR);
-				printf("\nIdentifiant train ou bateau: ");
-				scanf("%s", buf);
-				strcat(msgClient, buf);
-				strcat(msgClient, SEPARATEUR);
-				printf("Nombre de containers chargé: ");
-				scanf("%s", buf);
-				strcat(msgClient, buf);
 				break;
 			case 7:
 				sprintf(msgClient, "LOGOUT");

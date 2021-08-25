@@ -47,7 +47,7 @@ public class ServeurPLAMAP extends ThreadServeur {
     ObjectInputStream ois;
 
     public ServeurPLAMAP(String addr_compta, int port_compta, int port, SourceTaches tachesAExecuter, ConsoleServeur guiApplication) {
-        super(port, tachesAExecuter, guiApplication);
+        super(port, guiApplication);
         this.addr_compta = addr_compta;
         this.port_compta = port_compta;
     }

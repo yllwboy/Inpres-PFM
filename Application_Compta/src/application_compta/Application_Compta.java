@@ -12,8 +12,6 @@ import java.math.BigInteger;
 import java.net.*;
 import java.security.*;
 import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import javax.swing.table.DefaultTableModel;

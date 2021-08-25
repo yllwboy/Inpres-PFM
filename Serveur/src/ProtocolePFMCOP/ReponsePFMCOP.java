@@ -18,6 +18,9 @@ public class ReponsePFMCOP implements Reponse, Serializable {
     public static int LOGIN_GROUP_OK = 100;
     public static int WRONG_LOGIN = 101;
     public static int ALREADY_LOGGED_IN = 102;
+    public static int POST_QUESTION_OK = 200;
+    public static int ANSWER_QUESTION_OK = 300;
+    public static int POST_EVENT_OK = 400;
     public static int NOT_LOGGED_IN = 601;
     public static int INVALID_FORMAT = 888;
     public static int UNKNOWN_TYPE = 999;

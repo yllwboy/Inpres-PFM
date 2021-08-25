@@ -5,12 +5,34 @@
  */
 package application_jchat_pfm;
 
+import ProtocolePFMCOP.ReponsePFMCOP;
+import ProtocolePFMCOP.RequetePFMCOP;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
+import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
+import java.util.Date;
+import javax.swing.table.DefaultTableModel;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.util.Arrays;
+
 /**
  *
  * @author hector
  */
 public class Application_JChat_PFM extends javax.swing.JFrame {
-
+    private MulticastSocket mSock = null;
+    private InetAddress adresse;
+    private int port;
+    private ChatRefresher cr;
     /**
      * Creates new form Application_JChat_PFM
      */
@@ -41,10 +63,12 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
         TFQuestion = new javax.swing.JTextField();
         BEnvoyer = new javax.swing.JButton();
         jScrollPane2 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        TChat = new javax.swing.JTable();
         jLabel6 = new javax.swing.JLabel();
         TFReponse = new javax.swing.JTextField();
         BRepondre = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        TAReponse = new javax.swing.JTextArea();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -54,7 +78,7 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
 
         TFAdresse.setText("127.0.0.1");
 
-        TFPort.setText("66666");
+        TFPort.setText("55000");
 
         jLabel4.setText("Nom :");
 
@@ -87,7 +111,7 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
             }
         });
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        TChat.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
                 {null, null},
                 {null, null},
@@ -112,10 +136,10 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
                 return canEdit [columnIndex];
             }
         });
-        jTable1.setColumnSelectionAllowed(true);
-        jTable1.getTableHeader().setReorderingAllowed(false);
-        jScrollPane2.setViewportView(jTable1);
-        jTable1.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        TChat.setColumnSelectionAllowed(true);
+        TChat.getTableHeader().setReorderingAllowed(false);
+        jScrollPane2.setViewportView(TChat);
+        TChat.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
 
         jLabel6.setText("Réponse :");
 
@@ -125,6 +149,10 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
                 BRepondreActionPerformed(evt);
             }
         });
+
+        TAReponse.setColumns(20);
+        TAReponse.setRows(5);
+        jScrollPane1.setViewportView(TAReponse);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -143,30 +171,31 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
                             .addComponent(TFPort)
                             .addComponent(TFAdresse)))
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel4)
-                        .addGap(77, 77, 77)
-                        .addComponent(TFUser))
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel5)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(TFPass))
-                    .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel3)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(TFQuestion))
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(BRepondre, javax.swing.GroupLayout.Alignment.TRAILING)
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                                 .addComponent(BConnexion)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(BDeconnexion))
-                            .addComponent(BEnvoyer, javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addComponent(BRepondre, javax.swing.GroupLayout.Alignment.TRAILING)))
+                            .addComponent(BEnvoyer, javax.swing.GroupLayout.Alignment.TRAILING)))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addComponent(jLabel6)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(TFReponse)))
+                        .addComponent(TFReponse))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel5)
+                            .addComponent(jLabel4))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(TFUser)
+                            .addComponent(TFPass))))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -199,13 +228,15 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(BEnvoyer)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 182, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 185, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(TFReponse, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel6))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(BRepondre)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -213,19 +244,138 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void BConnexionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BConnexionActionPerformed
-        // TODO add your handling code here:
+        if(mSock != null)
+            return;
+        
+        try {
+            Socket loginSock = new Socket(TFAdresse.getText(), Integer.parseInt(TFPort.getText()));
+            System.out.println(loginSock.getInetAddress().toString());
+            
+            String chargeUtile;
+            String temps = Long.toString((new Date()).getTime());
+            String alea = Double.toString(Math.random());
+            byte[] msgD;
+
+            String user = TFUser.getText(), password = TFPass.getText();
+
+            System.out.println("Instanciation du message digest");
+            Security.addProvider(new BouncyCastleProvider());
+            MessageDigest md = MessageDigest.getInstance("SHA-1", RequetePFMCOP.codeProvider);
+            md.update(user.getBytes());
+            md.update(password.getBytes());
+            md.update(temps.getBytes());
+            md.update(alea.getBytes());
+
+            msgD = md.digest();
+            chargeUtile = user + "  " + temps + "  " + alea;
+            
+            ObjectOutputStream oos = new ObjectOutputStream(loginSock.getOutputStream());
+            ObjectInputStream ois = new ObjectInputStream(loginSock.getInputStream());
+            
+            oos.writeObject(new RequetePFMCOP(RequetePFMCOP.LOGIN_GROUP, chargeUtile, msgD));
+            oos.flush();
+            
+            ReponsePFMCOP rep = (ReponsePFMCOP)ois.readObject();
+            
+            if(rep.getCode() == ReponsePFMCOP.LOGIN_GROUP_OK) {
+                String[] parser = rep.getChargeUtile().split("  ");
+                    
+                if(parser.length >= 2) {
+                    adresse = InetAddress.getByName(parser[0]);
+                    port = Integer.parseInt(parser[1]);
+                    
+                    System.out.println(adresse + " " + port);
+                    
+                    mSock = new MulticastSocket(port);
+                    mSock.joinGroup(adresse);
+                    
+                    TAReponse.setText(" *** Reponse reçue : Connexion réussie = " + mSock.isConnected());
+                    
+                    cr = new ChatRefresher(mSock, (DefaultTableModel) TChat.getModel());
+                    cr.start();
+                }
+            }
+            else if(rep.getCode() == ReponsePFMCOP.WRONG_LOGIN)
+                TAReponse.setText(" *** Reponse reçue : Nom d'utilisateur ou mot de passe erroné");
+            else if(rep.getCode() == ReponsePFMCOP.ALREADY_LOGGED_IN)
+                TAReponse.setText(" *** Reponse reçue : Vous êtes déjà connecté");
+            else if(rep.getCode() == ReponsePFMCOP.INVALID_FORMAT)
+                TAReponse.setText(" *** Reponse reçue : Le format de la commande est invalide");
+            else if(rep.getCode() == ReponsePFMCOP.UNKNOWN_TYPE)
+                TAReponse.setText(" *** Reponse reçue : La commande est inconnue");
+            else if(rep.getCode() == ReponsePFMCOP.SERVER_FAIL)
+                TAReponse.setText(" *** Reponse reçue : Erreur système du serveur");
+            else
+                TAReponse.setText(" *** Reponse reçue : " + rep.getChargeUtile());
+            
+            loginSock.close();
+        }
+        catch (ClassNotFoundException e) {
+            TAReponse.setText("--- erreur sur la classe = " + e.getMessage());
+        }
+        catch (IOException e) {
+            TAReponse.setText("--- erreur IO = " + e.getMessage());
+        }
+        catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+            TAReponse.setText("--- erreur cryptage = " + e.getMessage());
+        }
     }//GEN-LAST:event_BConnexionActionPerformed
 
     private void BDeconnexionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BDeconnexionActionPerformed
-        // TODO add your handling code here:
+        if(mSock == null)
+            return;
+        
+        mSock.close();
+        mSock = null;
+        
+        cr.interrupt();
     }//GEN-LAST:event_BDeconnexionActionPerformed
 
     private void BEnvoyerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BEnvoyerActionPerformed
-        // TODO add your handling code here:
+        //if(mSock == null)
+        //    return;
+        
+        int bufLen = 256;
+        byte[] buf;
+        
+        try {
+            byte[] question = TFQuestion.getText().getBytes();
+            
+            System.out.println("Instanciation du message digest");
+            Security.addProvider(new BouncyCastleProvider());
+            MessageDigest md = MessageDigest.getInstance("SHA-1", RequetePFMCOP.codeProvider);
+            md.update(question);
+
+            byte[] msgD = md.digest();
+            System.out.println("Taille du digest = " + msgD.length);
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte t = (byte) RequetePFMCOP.POST_QUESTION;
+            baos.write(msgD);
+            byte lq = (byte) question.length;
+            baos.write(lq);
+            baos.write(question);
+            
+            // envoi de la réponse
+            if (baos.toByteArray().length > bufLen) {
+                TAReponse.setText("Question trop grande pour l'envoi.");
+                return;
+            }
+            buf = Arrays.copyOf(baos.toByteArray(), bufLen);
+            System.out.println("Payload = " + new String(buf));
+            System.out.println("Longueur envoyée = " + bufLen);
+            mSock.send(new DatagramPacket(buf, bufLen, adresse, port));
+            TAReponse.setText("Envoi réussi.");
+        } catch (IOException ex) {
+            TAReponse.setText("--- erreur IO = " + ex.getMessage());
+        } catch (NoSuchAlgorithmException | NoSuchProviderException ex) {
+            TAReponse.setText("--- erreur cryptage = " + ex.getMessage());
+        }
     }//GEN-LAST:event_BEnvoyerActionPerformed
 
     private void BRepondreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BRepondreActionPerformed
-        // TODO add your handling code here:
+        if(mSock == null)
+            return;
     }//GEN-LAST:event_BRepondreActionPerformed
 
     /**
@@ -268,6 +418,8 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
     private javax.swing.JButton BDeconnexion;
     private javax.swing.JButton BEnvoyer;
     private javax.swing.JButton BRepondre;
+    private javax.swing.JTextArea TAReponse;
+    private javax.swing.JTable TChat;
     private javax.swing.JTextField TFAdresse;
     private javax.swing.JTextField TFPass;
     private javax.swing.JTextField TFPort;
@@ -280,7 +432,7 @@ public class Application_JChat_PFM extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
+    private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JTable jTable1;
     // End of variables declaration//GEN-END:variables
 }

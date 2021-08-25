@@ -112,20 +112,16 @@ public class Serveur_Mouvements extends javax.swing.JFrame implements ConsoleSer
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel3)
-                            .addComponent(jLabel2)
-                            .addComponent(jLabel4))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(TFPort_in, javax.swing.GroupLayout.DEFAULT_SIZE, 158, Short.MAX_VALUE)
-                            .addComponent(TFPort_emp)
-                            .addComponent(TFAdresse_compta)))
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel5)
-                        .addGap(49, 49, 49)
-                        .addComponent(TFPort_compta)))
+                    .addComponent(jLabel3)
+                    .addComponent(jLabel2)
+                    .addComponent(jLabel4)
+                    .addComponent(jLabel5))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(TFPort_compta)
+                    .addComponent(TFPort_in, javax.swing.GroupLayout.DEFAULT_SIZE, 158, Short.MAX_VALUE)
+                    .addComponent(TFPort_emp)
+                    .addComponent(TFAdresse_compta))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -164,9 +160,9 @@ public class Serveur_Mouvements extends javax.swing.JFrame implements ConsoleSer
             try {
                 port_in = Integer.parseInt(TFPort_in.getText());
                 TraceEvenements("serveur#acquisition du port_in#main");
-                ts_in = new ThreadServeur(port_in, new ListeTaches(), this);
+                ts_in = new ThreadServeur(port_in, this);
                 ts_in.start();
-            } catch (Exception ex) {
+            } catch (NumberFormatException ex) {
                 System.err.println("Erreur ? [" + ex.getMessage() + "]");
             }
         }
@@ -176,7 +172,7 @@ public class Serveur_Mouvements extends javax.swing.JFrame implements ConsoleSer
                 TraceEvenements("serveur#acquisition du port_mouvements#main");
                 ts_emp = new ServeurPLAMAP(TFAdresse_compta.getText(), Integer.parseInt(TFPort_compta.getText()), port_emp, new ListeTaches(), this);
                 ts_emp.start();
-            } catch (Exception ex) {
+            } catch (NumberFormatException ex) {
                 System.err.println("Erreur ? [" + ex.getMessage() + "]");
             }
         }

@@ -129,13 +129,13 @@ public class Serveur_Compta extends javax.swing.JFrame implements ConsoleServeur
         if(ts_mouvements == null) {
             port_mouvements = Integer.parseInt(TFPort_mouvements.getText());
             TraceEvenements("serveur#acquisition du port_mouvements#main");
-            ts_mouvements = new ThreadServeur(port_mouvements, new ListeTaches(), this);
+            ts_mouvements = new ThreadServeur(port_mouvements, this);
             ts_mouvements.start();
         }
         if(ts_compta == null) {
             port_compta = Integer.parseInt(TFPort_compta.getText());
             TraceEvenements("serveur#acquisition du port_compta#main");
-            ts_compta = new ThreadServeur(port_compta, new ListeTaches(), this);
+            ts_compta = new ThreadServeur(port_compta, this);
             ts_compta.start();
         }
     }//GEN-LAST:event_BStartActionPerformed

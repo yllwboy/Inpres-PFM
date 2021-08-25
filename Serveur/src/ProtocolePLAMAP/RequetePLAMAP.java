@@ -147,6 +147,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                         try {
                             ResultSet rs = db.executeRequeteSelection("SELECT pass FROM users WHERE name = '" + user + "'");
                             if(rs.next() && pass.equals(rs.getString("pass"))) {
+                                System.out.println("Connexion réussie");
                                 loggedIn = true;
                                 rep = "LOGIN_CONT_OK";
                             }
@@ -266,7 +267,7 @@ public class RequetePLAMAP implements Requete, Serializable {
                         cs.TraceEvenements(adresseDistante + "#Liste des emplacements occupés pour " + destination + "#" + Thread.currentThread().getName());
 
                         try {
-                            ResultSet rs = db.executeRequeteSelection("SELECT x, y FROM occupations WHERE container IN (SELECT container FROM mouvements WHERE destination = '" + destination + "') ORDER BY dateDebut ASC");
+                            ResultSet rs = db.executeRequeteSelection("SELECT * FROM occupations WHERE container IN (SELECT container FROM mouvements WHERE destination = '" + destination + "') ORDER BY dateDebut ASC");
                             String out_cu = "";
                             while(rs.next()) {
                                 out_cu += rs.getString("x") + "," + rs.getString("y");

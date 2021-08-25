@@ -37,9 +37,9 @@ public class ThreadServeur extends Thread {
     protected ConsoleServeur guiApplication;
     protected ServerSocket SSocket = null;
 
-    public ThreadServeur(int port, SourceTaches tachesAExecuter, ConsoleServeur guiApplication) {
+    public ThreadServeur(int port, ConsoleServeur guiApplication) {
         this.port = port;
-        this.tachesAExecuter = tachesAExecuter;
+        this.tachesAExecuter = new ListeTaches();
         this.guiApplication = guiApplication;
     }
     
@@ -77,6 +77,20 @@ public class ThreadServeur extends Thread {
                 ois = new ObjectInputStream(CSocket.getInputStream());
                 req = (Requete)ois.readObject();
                 System.out.println("Requete lue par le serveur, instance de " + req.getClass().getName());
+                
+                if(req instanceof RequeteTRAMAP)
+                    ((RequeteTRAMAP)req).setOis(ois);
+                if(req instanceof RequeteCHAMAP)
+                    ((RequeteCHAMAP)req).setOis(ois);
+                if(req instanceof RequeteBISAMAP)
+                    ((RequeteBISAMAP)req).setOis(ois);
+                Runnable travail = req.createRunnable(CSocket, guiApplication);
+                if (travail != null) {
+                    tachesAExecuter.recordTache(travail);
+                    System.out.println("Travail mis dans la file");
+                }
+                else
+                    System.out.println("Pas de mise en file");
             }
             catch (ClassNotFoundException e) {
                 System.err.println("Erreur de def de classe [" + e.getMessage() + "]");
@@ -84,20 +98,6 @@ public class ThreadServeur extends Thread {
             catch (IOException e) {
                 System.err.println("Erreur ? [" + e.getMessage() + "]");
             }
-            
-            if(req instanceof RequeteTRAMAP)
-                ((RequeteTRAMAP)req).setOis(ois);
-            if(req instanceof RequeteCHAMAP)
-                ((RequeteCHAMAP)req).setOis(ois);
-            if(req instanceof RequeteBISAMAP)
-                ((RequeteBISAMAP)req).setOis(ois);
-            Runnable travail = req.createRunnable(CSocket, guiApplication);
-            if (travail != null) {
-                tachesAExecuter.recordTache(travail);
-                System.out.println("Travail mis dans la file");
-            }
-            else
-                System.out.println("Pas de mise en file");
         }
     }
 }

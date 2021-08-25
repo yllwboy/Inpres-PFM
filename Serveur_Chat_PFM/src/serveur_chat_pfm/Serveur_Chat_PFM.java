@@ -5,12 +5,16 @@
  */
 package serveur_chat_pfm;
 
+import protocole.ConsoleServeur;
+import serveur.ServeurPFMCOP;
+
 /**
  *
  * @author hector
  */
-public class Serveur_Chat_PFM extends javax.swing.JFrame {
-
+public class Serveur_Chat_PFM extends javax.swing.JFrame implements ConsoleServeur {
+    private int port_for_us_only, port_chat;
+    private ServeurPFMCOP s_pfmcop;
     /**
      * Creates new form Serveur_Chat_PFM
      */
@@ -29,24 +33,40 @@ public class Serveur_Chat_PFM extends javax.swing.JFrame {
 
         jLabel1 = new javax.swing.JLabel();
         TFPortForUsOnly = new javax.swing.JTextField();
-        jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
+        BStart = new javax.swing.JButton();
+        BStop = new javax.swing.JButton();
         jLabel2 = new javax.swing.JLabel();
         TFPortChat = new javax.swing.JTextField();
+        jLabel3 = new javax.swing.JLabel();
+        TFAdresseChat = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
         jLabel1.setText("Port pour le login :");
 
-        TFPortForUsOnly.setText("66666");
+        TFPortForUsOnly.setText("55000");
 
-        jButton1.setText("start");
+        BStart.setText("start");
+        BStart.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BStartActionPerformed(evt);
+            }
+        });
 
-        jButton2.setText("stop");
+        BStop.setText("stop");
+        BStop.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                BStopActionPerformed(evt);
+            }
+        });
 
         jLabel2.setText("Port pour le chat :");
 
-        TFPortChat.setText("77777");
+        TFPortChat.setText("6789");
+
+        jLabel3.setText("Adresse pour le chat:");
+
+        TFAdresseChat.setText("228.5.6.7");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -56,17 +76,21 @@ public class Serveur_Chat_PFM extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jButton1)
+                        .addComponent(BStart)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton2))
+                        .addComponent(BStop))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jLabel1)
+                        .addGap(32, 32, 32)
+                        .addComponent(TFPortForUsOnly))
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel1)
+                            .addComponent(jLabel3)
                             .addComponent(jLabel2))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(TFPortChat)
-                            .addComponent(TFPortForUsOnly))))
+                            .addComponent(TFAdresseChat, javax.swing.GroupLayout.DEFAULT_SIZE, 144, Short.MAX_VALUE))))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -78,17 +102,38 @@ public class Serveur_Chat_PFM extends javax.swing.JFrame {
                     .addComponent(TFPortForUsOnly, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel3)
+                    .addComponent(TFAdresseChat, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2)
                     .addComponent(TFPortChat, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton1)
-                    .addComponent(jButton2))
+                    .addComponent(BStart)
+                    .addComponent(BStop))
                 .addContainerGap())
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void BStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BStartActionPerformed
+        if(s_pfmcop == null) {
+            port_for_us_only = Integer.parseInt(TFPortForUsOnly.getText());
+            port_chat = Integer.parseInt(TFPortChat.getText());
+            TraceEvenements("serveur#acquisition du port_mouvements#main");
+            s_pfmcop = new ServeurPFMCOP(port_for_us_only, TFAdresseChat.getText(), port_chat, this);
+            s_pfmcop.start();
+        }
+    }//GEN-LAST:event_BStartActionPerformed
+
+    private void BStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BStopActionPerformed
+        if(s_pfmcop != null) {
+            s_pfmcop.interrupt();
+            s_pfmcop = null;
+        }
+    }//GEN-LAST:event_BStopActionPerformed
 
     /**
      * @param args the command line arguments
@@ -126,11 +171,18 @@ public class Serveur_Chat_PFM extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton BStart;
+    private javax.swing.JButton BStop;
+    private javax.swing.JTextField TFAdresseChat;
     private javax.swing.JTextField TFPortChat;
     private javax.swing.JTextField TFPortForUsOnly;
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
     // End of variables declaration//GEN-END:variables
+
+    @Override
+    public void TraceEvenements(String commentaire) {
+        System.out.println(commentaire);
+    }
 }

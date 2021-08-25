@@ -469,9 +469,8 @@ void *fctThread(void *param)
 					{
 						char *idT = strtok(NULL, SEPARATEUR);
 						destination = strtok(NULL, SEPARATEUR);
-						capMax = strtok(NULL, SEPARATEUR);
 						
-						if(idT != NULL && destination != NULL && capMax != NULL)
+						if(idT != NULL && destination != NULL)
 						{
 							strncpy(idTransport, idT, (MAXSTRING - 1) * sizeof(char));
 							idTransport[MAXSTRING - 1] = 0;
@@ -479,11 +478,7 @@ void *fctThread(void *param)
 							pthread_mutex_lock(&mutexFichParc);
 							
 							sprintf(msgMouv, "GET_LIST::");
-							strcat(msgMouv, idTransport);
-							strcat(msgMouv, SEPARATEUR);
 							strcat(msgMouv, destination);
-							strcat(msgMouv, SEPARATEUR);
-							strcat(msgMouv, capMax);
 							strcat(msgMouv, TERMINATEUR);
 							
 							if(send(hSocketMouv, msgMouv, strlen(msgMouv), 0) == -1)
@@ -561,9 +556,12 @@ void *fctThread(void *param)
 						
 						if(idC != NULL)
 						{
+							strncpy(idContainer, idC, (MAXSTRING - 1) * sizeof(char));
+							idContainer[MAXSTRING - 1] = 0;
+							
 							pthread_mutex_lock(&mutexFichParc);
 							strcat(msgMouv, SEPARATEUR);
-							strcat(msgMouv, idC);
+							strcat(msgMouv, idContainer);
 							
 							// FILE *f = fopen("FICH_PARC", "r+b");
 							// if(f == NULL)
